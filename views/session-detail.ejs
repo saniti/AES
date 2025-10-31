@@ -6,6 +6,7 @@
   <title>Session Detail - <%= appName %></title>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/locale.js"></script>
 </head>
 <body class="with-sidebar">
   <%- include('nav', { user: user }) %>
@@ -120,11 +121,12 @@
       document.getElementById('sessionDate').textContent = formatDateTime(session.startTime);
       document.getElementById('sessionDuration').textContent = calculateDuration(session.startTime, session.stopTime);
 
-      // Traffic badge
+      // Injury risk badge
       const trafficBadge = document.getElementById('trafficBadge');
-      const traffic = session.trafficLight || session.injuryLevel || 'Green';
-      trafficBadge.textContent = traffic;
-      trafficBadge.className = `traffic-indicator traffic-${traffic.toLowerCase()}`;
+      const injuryLevel = session.trafficLight || session.injuryLevel || 'Green';
+      const riskLabel = injuryLevel === 'Green' ? 'Low Risk' : injuryLevel === 'Yellow' ? 'Medium Risk' : injuryLevel === 'Red' ? 'High Risk' : 'Low Risk';
+      trafficBadge.textContent = riskLabel;
+      trafficBadge.className = `traffic-indicator traffic-${injuryLevel.toLowerCase()}`;
 
       // Session info
       document.getElementById('startTime').textContent = formatFullDateTime(session.startTime);
@@ -232,8 +234,10 @@
 
     function formatDateTime(dateStr) {
       if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
       const date = new Date(dateStr);
-      return date.toLocaleDateString('en-AU', { 
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleDateString(localeCode, { 
         weekday: 'long',
         year: 'numeric', 
         month: 'long', 
@@ -243,8 +247,10 @@
 
     function formatFullDateTime(dateStr) {
       if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
       const date = new Date(dateStr);
-      return date.toLocaleString('en-AU', { 
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleString(localeCode, { 
         year: 'numeric', 
         month: 'short', 
         day: 'numeric',

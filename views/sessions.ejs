@@ -6,6 +6,7 @@
   <title>Sessions - <%= appName %></title>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/locale.js"></script>
 </head>
 <body class="with-sidebar">
   <%- include('nav', { user: user }) %>
@@ -125,7 +126,8 @@
         if (allSessions.length === 0) {
           emptyEl.style.display = 'block';
         } else {
-          displaySessions(allSessions);
+          // Apply filtering if horseId is in URL
+          filterSessions();
         }
       } catch (error) {
         console.error('Error loading sessions:', error);
@@ -174,8 +176,8 @@
                 <h3 class="session-horse">${escapeHtml(session.horseName || 'Unknown Horse')}</h3>
                 <span class="session-date">${formatDateTime(session.startTime)}</span>
               </div>
-              <div class="traffic-indicator traffic-${(session.trafficLight || 'Green').toLowerCase()}">
-                ${session.trafficLight || 'Green'}
+              <div class="traffic-indicator traffic-${(session.trafficLight || session.injuryLevel || 'Green').toLowerCase()}">
+                ${(session.trafficLight || session.injuryLevel) === 'Green' ? 'Low Risk' : (session.trafficLight || session.injuryLevel) === 'Yellow' ? 'Medium Risk' : (session.trafficLight || session.injuryLevel) === 'Red' ? 'High Risk' : 'Low Risk'}
               </div>
             </div>
 
@@ -231,8 +233,10 @@
 
     function formatDateTime(dateStr) {
       if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
       const date = new Date(dateStr);
-      return date.toLocaleDateString('en-AU', { 
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleDateString(localeCode, { 
         weekday: 'short',
         year: 'numeric', 
         month: 'short', 
@@ -242,8 +246,10 @@
 
     function formatTime(dateStr) {
       if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
       const date = new Date(dateStr);
-      return date.toLocaleTimeString('en-AU', { 
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleTimeString(localeCode, { 
         hour: '2-digit', 
         minute: '2-digit'
       });

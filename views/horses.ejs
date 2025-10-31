@@ -6,6 +6,7 @@
   <title>Horses - <%= appName %></title>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/locale.js"></script>
 </head>
 <body class="with-sidebar">
   <%- include('nav', { user: user }) %>
@@ -23,30 +24,26 @@
       <% } %>
 
       <div class="horses-controls">
-        <div class="search-box">
+        <div class="filters">
           <input type="text" id="searchInput" placeholder="Search by name, brand, or RFID..." />
-        </div>
-        
-        <div class="filter-controls">
           <select id="statusFilter">
             <option value="">All Status</option>
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
             <option value="Retired">Retired</option>
           </select>
-          
           <select id="genderFilter">
-            <option value="">All Gender</option>
-            <option value="Mare">Mare</option>
+            <option value="">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
             <option value="Gelding">Gelding</option>
-            <option value="Stallion">Stallion</option>
           </select>
-          
-          <select id="trafficFilter">
-            <option value="">All Traffic</option>
-            <option value="Green">Green</option>
-            <option value="Yellow">Yellow</option>
-            <option value="Red">Red</option>
+          <select id="injuryRiskFilter">
+            <option value="">All Injury Risks</option>
+            <option value="Green">Low Risk (Green)</option>
+            <option value="Yellow">Medium Risk (Yellow)</option>
+            <option value="Red">High Risk (Red)</option>
+            <option value="None">No Assessment</option>
           </select>
         </div>
       </div>
@@ -133,7 +130,7 @@
       document.getElementById('searchInput').addEventListener('input', filterHorses);
       document.getElementById('statusFilter').addEventListener('change', filterHorses);
       document.getElementById('genderFilter').addEventListener('change', filterHorses);
-      document.getElementById('trafficFilter').addEventListener('change', filterHorses);
+      document.getElementById('injuryRiskFilter').addEventListener('change', filterHorses);
     });
 
     async function loadHorses(stableId) {
@@ -184,7 +181,7 @@
       const searchTerm = document.getElementById('searchInput').value.toLowerCase();
       const statusFilter = document.getElementById('statusFilter').value;
       const genderFilter = document.getElementById('genderFilter').value;
-      const trafficFilter = document.getElementById('trafficFilter').value;
+      const injuryRiskFilter = document.getElementById('injuryRiskFilter').value;
 
       const filtered = allHorses.filter(horse => {
         const matchesSearch = !searchTerm || 
@@ -194,9 +191,10 @@
 
         const matchesStatus = !statusFilter || horse.status === statusFilter;
         const matchesGender = !genderFilter || horse.gender === genderFilter;
-        const matchesTraffic = !trafficFilter || horse.traffic === trafficFilter;
+        const matchesInjuryRisk = !injuryRiskFilter || 
+          (injuryRiskFilter === 'None' ? !horse.traffic : horse.traffic === injuryRiskFilter);
 
-        return matchesSearch && matchesStatus && matchesGender && matchesTraffic;
+        return matchesSearch && matchesStatus && matchesGender && matchesInjuryRisk;
       });
 
       displayHorses(filtered);
@@ -227,7 +225,7 @@
               ${horse.alias ? `<span class="horse-alias">"${escapeHtml(horse.alias)}"</span>` : ''}
             </div>
             <div class="traffic-indicator traffic-${(horse.traffic || 'Green').toLowerCase()}">
-              ${horse.traffic || 'Green'}
+              ${horse.traffic === 'Green' ? 'Low Risk' : horse.traffic === 'Yellow' ? 'Medium Risk' : horse.traffic === 'Red' ? 'High Risk' : horse.traffic || 'Low Risk'}
             </div>
           </div>
 
@@ -250,8 +248,8 @@
             </div>
             <div class="detail-row">
               <span class="label">Last Session:</span>
-              <span class="value">
-                ${horse.lastSession ? `<a href="/sessions?horseId=${horse.id}&horseName=${encodeURIComponent(horse.name)}&date=${horse.lastSession}" class="session-link">${formatDateTime(horse.lastSession)}</a>` : 'Never'}
+              <span class="value" id="last-session-${horse.id}">
+                ${horse.lastSession ? `<span class="session-link" style="cursor: pointer;" onclick="goToLastSession('${horse.id}', '${horse.lastSession}')">${formatDateTime(horse.lastSession)}</span>` : 'Never'}
               </span>
             </div>
             ${horse.rfid ? `
@@ -288,6 +286,32 @@
 
     function viewSessions(horseId, horseName) {
       window.location.href = `/sessions?horseId=${horseId}&horseName=${encodeURIComponent(horseName)}`;
+    }
+
+    async function goToLastSession(horseId, lastSessionDate) {
+      // Fetch sessions for this horse to find the matching recording ID
+      try {
+        const response = await fetch(`/api/user/sessions/${currentStableId}/7`);
+        if (!response.ok) throw new Error('Failed to fetch sessions');
+        
+        const sessions = await response.json();
+        
+        // Find session matching horse and date
+        const matchingSession = sessions.find(s => 
+          String(s.horseId) === String(horseId) && 
+          new Date(s.startTime).getTime() === new Date(lastSessionDate).getTime()
+        );
+        
+        if (matchingSession) {
+          window.location.href = `/session/${matchingSession.id}`;
+        } else {
+          // Fallback to filtered sessions view
+          window.location.href = `/sessions?horseId=${horseId}&date=${lastSessionDate}`;
+        }
+      } catch (error) {
+        console.error('Error finding session:', error);
+        alert('Could not find session details');
+      }
     }
 
     function closeEditModal() {
@@ -327,23 +351,28 @@
     }
 
     function formatDate(dateStr) {
-      if (!dateStr) return 'N/A';
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' });
+      return window.formatDate ? window.formatDate(dateStr) : 'N/A';
     }
 
     function formatDateTime(dateStr) {
-      if (!dateStr) return 'Never';
+      if (!dateStr) return 'N/A';
       const date = new Date(dateStr);
       const now = new Date();
-      const diffMs = now - date;
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
       
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays} days ago`;
+      const locale = getCurrentLocale();
+      const translations = {
+        'en-AU': { today: 'Today', yesterday: 'Yesterday', daysAgo: 'days ago' },
+        'en-US': { today: 'Today', yesterday: 'Yesterday', daysAgo: 'days ago' },
+        'es-ES': { today: 'Hoy', yesterday: 'Ayer', daysAgo: 'días atrás' }
+      };
+      const t = translations[locale] || translations['en-AU'];
       
-      return date.toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' });
+      if (diffDays === 0) return t.today;
+      if (diffDays === 1) return t.yesterday;
+      if (diffDays < 7) return `${diffDays} ${t.daysAgo}`;
+      
+      return window.formatDate ? window.formatDate(dateStr) : date.toLocaleDateString();
     }
 
     async function loadUnassignedSessions(stableId) {

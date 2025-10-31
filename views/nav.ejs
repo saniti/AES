@@ -49,6 +49,14 @@
 
   <div class="sidebar-footer">
     <div class="theme-selector">
+      <label for="localeSelect" style="font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 5px; display: block;">Language & Region</label>
+      <select id="localeSelect" class="theme-dropdown">
+        <option value="en-AU">English (Australian)</option>
+        <option value="en-US">English (US)</option>
+        <option value="es-ES">Español</option>
+      </select>
+    </div>
+    <div class="theme-selector">
       <label for="themeSelect" style="font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 5px; display: block;">Theme</label>
       <select id="themeSelect" class="theme-dropdown">
         <option value="default">Default Blue</option>
@@ -61,11 +69,12 @@
     </div>
     <a href="/logout" class="nav-item logout">
       <span class="nav-icon">🚪</span>
-      <span class="nav-text">Logout</span>
+      <span class="nav-text" data-i18n="logout">Logout</span>
     </a>
   </div>
 </nav>
 
+<script src="/js/locale.js"></script>
 <script>
 // Load stables on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -117,6 +126,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const theme = themeSelect.value;
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+  });
+  
+  // Locale selector
+  const localeSelect = document.getElementById('localeSelect');
+  const savedLocale = localStorage.getItem('locale') || 'en-AU';
+  localeSelect.value = savedLocale;
+  
+  localeSelect.addEventListener('change', () => {
+    const locale = localeSelect.value;
+    localStorage.setItem('locale', locale);
+    // Reload page to apply locale changes
+    window.location.reload();
   });
 });
 </script>
