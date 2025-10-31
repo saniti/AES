@@ -6,94 +6,251 @@
   <title>Dashboard - <%= appName %></title>
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/locale.js"></script>
 </head>
 <body class="with-sidebar">
   <%- include('nav', { user: user }) %>
 
   <main class="main-content">
-    <header class="top-header">
-      <h1><%= appName %> - Dashboard</h1>
-    </header>
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <p class="subtitle">Overview of your stable's performance and alerts</p>
+    </div>
 
-    <div class="content-wrapper">
-      <% if (demoMode) { %>
-        <div class="alert alert-info">
-          <strong>Demo Mode:</strong> You are viewing the dashboard in demo mode. API calls will return mock data.
-        </div>
-      <% } %>
-
-      <div class="dashboard-grid">
-        <section class="auth-info">
-          <h3>Authentication Status</h3>
-          <div class="info-card">
-            <div class="info-row">
-              <span class="label">Status:</span>
-              <span class="value success">✓ Authenticated</span>
-            </div>
-            <div class="info-row">
-              <span class="label">User:</span>
-              <span class="value"><%= user.name %></span>
-            </div>
-            <div class="info-row">
-              <span class="label">Email:</span>
-              <span class="value"><%= user.email %></span>
-            </div>
-            <div class="info-row">
-              <span class="label">User ID:</span>
-              <span class="value"><code><%= user.sub %></code></span>
-            </div>
-          </div>
-        </section>
-
-        <section class="api-info">
-          <h3>API Integration</h3>
-          <div class="info-card">
-            <p>The application is configured to use the Alerte Equine API for data operations.</p>
-            
-            <div class="api-test">
-              <h4>Test API Connection</h4>
-              <button id="testApiBtn" class="btn btn-primary">Test API</button>
-              <div id="apiResult" class="api-result"></div>
-            </div>
-          </div>
-        </section>
+    <% if (demoMode) { %>
+      <div class="demo-banner">
+        <strong>Demo Mode:</strong> Showing demo dashboard data.
       </div>
+    <% } %>
+
+    <div id="loadingMessage" class="loading">Loading dashboard...</div>
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="dashboardContent" style="display: none;">
+      
+      <!-- Metrics Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon">🐴</div>
+          <div class="metric-content">
+            <div class="metric-value" id="totalHorses">0</div>
+            <div class="metric-label">Total Horses</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon">✅</div>
+          <div class="metric-content">
+            <div class="metric-value" id="activeHorses">0</div>
+            <div class="metric-label">Active Horses</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-icon">🏃</div>
+          <div class="metric-content">
+            <div class="metric-value" id="recentSessions">0</div>
+            <div class="metric-label">Sessions (7 days)</div>
+          </div>
+        </div>
+
+        <div class="metric-card clickable" onclick="window.location.href='/horses'">
+          <div class="metric-icon">⚠️</div>
+          <div class="metric-content">
+            <div class="metric-value" id="totalAlerts">0</div>
+            <div class="metric-label">Injury Alerts</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Injury Risk Breakdown -->
+      <div class="dashboard-section">
+        <h2>Injury Risk Overview</h2>
+        <div class="injury-risk-grid">
+          <div class="risk-card risk-high">
+            <div class="risk-count" id="highRisk">0</div>
+            <div class="risk-label">High Risk</div>
+            <div class="risk-indicator"></div>
+          </div>
+          <div class="risk-card risk-medium">
+            <div class="risk-count" id="mediumRisk">0</div>
+            <div class="risk-label">Medium Risk</div>
+            <div class="risk-indicator"></div>
+          </div>
+          <div class="risk-card risk-low">
+            <div class="risk-count" id="lowRisk">0</div>
+            <div class="risk-label">Low Risk</div>
+            <div class="risk-indicator"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Sessions -->
+      <div class="dashboard-section">
+        <div class="section-header">
+          <h2>Recent Sessions</h2>
+          <a href="/sessions" class="view-all-link">View All →</a>
+        </div>
+        <div id="recentSessionsContainer" class="recent-sessions-list"></div>
+        <div id="noSessions" class="empty-message" style="display: none;">
+          No recent sessions in the past 7 days.
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="dashboard-section">
+        <h2>Quick Actions</h2>
+        <div class="quick-actions">
+          <a href="/horses" class="action-button">
+            <span class="action-icon">🐴</span>
+            <span class="action-text">Manage Horses</span>
+          </a>
+          <a href="/sessions" class="action-button">
+            <span class="action-icon">🏃</span>
+            <span class="action-text">View Sessions</span>
+          </a>
+          <a href="/horses" class="action-button">
+            <span class="action-icon">⚠️</span>
+            <span class="action-text">Check Alerts</span>
+          </a>
+        </div>
+      </div>
+
     </div>
   </main>
 
   <script>
-    document.getElementById('testApiBtn').addEventListener('click', async () => {
-      const resultDiv = document.getElementById('apiResult');
-      resultDiv.innerHTML = '<p>Testing API connection...</p>';
-      
-      try {
-        const response = await fetch('/api/Dropdowns/gender');
-        const data = await response.json();
-        
-        if (response.ok) {
-          resultDiv.innerHTML = `
-            <div class="success">
-              <strong>✓ API Connection Successful</strong>
-              <pre>${JSON.stringify(data, null, 2)}</pre>
-            </div>
-          `;
-        } else {
-          resultDiv.innerHTML = `
-            <div class="error">
-              <strong>✗ API Error</strong>
-              <pre>${JSON.stringify(data, null, 2)}</pre>
-            </div>
-          `;
-        }
-      } catch (error) {
-        resultDiv.innerHTML = `
-          <div class="error">
-            <strong>✗ Connection Failed</strong>
-            <p>${error.message}</p>
-          </div>
-        `;
+    let currentStableId = null;
+
+    // Listen for stable changes
+    window.addEventListener('stableChanged', (e) => {
+      currentStableId = e.detail.stableId;
+      loadDashboard(currentStableId);
+    });
+
+    // Load dashboard on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      currentStableId = localStorage.getItem('selectedStable');
+      if (currentStableId) {
+        loadDashboard(currentStableId);
+      } else {
+        document.getElementById('loadingMessage').textContent = 'Please select a stable';
       }
     });
+
+    async function loadDashboard(stableId) {
+      if (!stableId) return;
+
+      const loadingEl = document.getElementById('loadingMessage');
+      const errorEl = document.getElementById('errorMessage');
+      const contentEl = document.getElementById('dashboardContent');
+
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      contentEl.style.display = 'none';
+
+      try {
+        const response = await fetch(`/api/user/dashboard/${stableId}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+
+        const data = await response.json();
+        
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+
+        // Update metrics
+        document.getElementById('totalHorses').textContent = data.totalHorses || 0;
+        document.getElementById('activeHorses').textContent = data.activeHorses || 0;
+        document.getElementById('recentSessions').textContent = data.recentSessions || 0;
+        
+        const totalAlerts = (data.injuryAlerts?.high || 0) + (data.injuryAlerts?.medium || 0);
+        document.getElementById('totalAlerts').textContent = totalAlerts;
+
+        // Update injury risk breakdown
+        document.getElementById('highRisk').textContent = data.injuryAlerts?.high || 0;
+        document.getElementById('mediumRisk').textContent = data.injuryAlerts?.medium || 0;
+        document.getElementById('lowRisk').textContent = data.injuryAlerts?.low || 0;
+
+        // Display recent sessions
+        displayRecentSessions(data.recentSessionsList || []);
+
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Error loading dashboard: ' + error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function displayRecentSessions(sessions) {
+      const container = document.getElementById('recentSessionsContainer');
+      const noSessionsEl = document.getElementById('noSessions');
+
+      if (sessions.length === 0) {
+        container.innerHTML = '';
+        noSessionsEl.style.display = 'block';
+        return;
+      }
+
+      noSessionsEl.style.display = 'none';
+      container.innerHTML = sessions.map(session => {
+        const injuryLevel = String(session.injuryLevel || 'Green');
+        const riskLabel = injuryLevel === 'Green' ? 'Low Risk' : injuryLevel === 'Yellow' ? 'Medium Risk' : injuryLevel === 'Red' ? 'High Risk' : 'Low Risk';
+        
+        return `
+          <div class="session-item" onclick="window.location.href='/session/${session.id}'">
+            <div class="session-item-header">
+              <div class="session-item-horse">
+                <strong>${escapeHtml(session.horseName)}</strong>
+              </div>
+              <div class="traffic-indicator traffic-${injuryLevel.toLowerCase()}">
+                ${riskLabel}
+              </div>
+            </div>
+            <div class="session-item-details">
+              <span class="session-item-date">${formatDateTime(session.startTime)}</span>
+              <span class="session-item-duration">${session.duration} min</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      
+      const translations = {
+        'en-AU': { today: 'Today', yesterday: 'Yesterday', at: 'at' },
+        'en-US': { today: 'Today', yesterday: 'Yesterday', at: 'at' },
+        'es-ES': { today: 'Hoy', yesterday: 'Ayer', at: 'a las' }
+      };
+      const t = translations[locale] || translations['en-AU'];
+      
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      const timeStr = date.toLocaleTimeString(localeCode, { hour: '2-digit', minute: '2-digit' });
+      
+      if (diffDays === 0) return `${t.today} ${t.at} ${timeStr}`;
+      if (diffDays === 1) return `${t.yesterday} ${t.at} ${timeStr}`;
+      
+      return date.toLocaleDateString(localeCode, { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
   </script>
 </body>
 </html>

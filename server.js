@@ -571,6 +571,87 @@ app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
   }
 });
 
+// Dashboard API
+app.get('/api/user/dashboard/:stableId', requireAuth, async (req, res) => {
+  try {
+    const { stableId } = req.params;
+    const accessToken = req.session.accessToken;
+
+    if (DEMO_MODE) {
+      // Demo data
+      return res.json({
+        totalHorses: 12,
+        activeHorses: 10,
+        recentSessions: 8,
+        injuryAlerts: {
+          high: 2,
+          medium: 3,
+          low: 5
+        },
+        recentSessionsList: [
+          { id: 1, horseName: 'Thunder', horseId: '1', startTime: new Date().toISOString(), injuryLevel: 'Green', duration: 60 },
+          { id: 2, horseName: 'Lightning', horseId: '2', startTime: new Date(Date.now() - 86400000).toISOString(), injuryLevel: 'Yellow', duration: 75 }
+        ]
+      });
+    }
+
+    // Fetch horses and sessions in parallel
+    const [horsesResponse, sessionsResponse] = await Promise.all([
+      axios.get(`${apiConfig.baseUrl}/api/Horses/session/stableId/${stableId}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      }),
+      axios.get(`${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}/7`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      })
+    ]);
+
+    const horses = horsesResponse.data;
+    const sessions = sessionsResponse.data;
+
+    // Calculate metrics
+    const totalHorses = horses.length;
+    const activeHorses = horses.filter(h => String(h.status) === 'Active').length;
+    
+    // Get sessions from last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentSessions = sessions.filter(s => new Date(s.startTime) > sevenDaysAgo);
+    
+    // Count injury alerts
+    const injuryAlerts = {
+      high: horses.filter(h => String(h.traffic) === 'Red').length,
+      medium: horses.filter(h => String(h.traffic) === 'Yellow').length,
+      low: horses.filter(h => String(h.traffic) === 'Green').length
+    };
+
+    // Get recent sessions with horse names
+    const horseMap = {};
+    horses.forEach(h => horseMap[h.id] = h.name);
+    
+    const recentSessionsList = recentSessions
+      .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+      .slice(0, 5)
+      .map(s => ({
+        id: s.id,
+        horseName: horseMap[s.horseId] || 'Unknown',
+        horseId: s.horseId,
+        startTime: s.startTime,
+        injuryLevel: String(s.trafficLight || s.injuryLevel || 'Green'),
+        duration: s.stopTime ? Math.floor((new Date(s.stopTime) - new Date(s.startTime)) / 60000) : 0
+      }));
+
+    res.json({
+      totalHorses,
+      activeHorses,
+      recentSessions: recentSessions.length,
+      injuryAlerts,
+      recentSessionsList
+    });
+  } catch (error) {
+    console.error('Dashboard API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
 // Get user's stables
 app.get('/api/user/stables', requireAuth, async (req, res) => {
   if (DEMO_MODE) {
