@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horses - <%= appName %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="with-sidebar">
+  <%- include('nav', { user: user }) %>
+
+  <main class="main-content">
+    <header class="top-header">
+      <h1>Horses</h1>
+    </header>
+
+    <div class="content-wrapper">
+      <% if (demoMode) { %>
+        <div class="alert alert-info">
+          <strong>Demo Mode:</strong> Showing demo horse data.
+        </div>
+      <% } %>
+
+      <div class="horses-controls">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Search by name, brand, or RFID..." />
+        </div>
+        
+        <div class="filter-controls">
+          <select id="statusFilter">
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Retired">Retired</option>
+          </select>
+          
+          <select id="genderFilter">
+            <option value="">All Gender</option>
+            <option value="Mare">Mare</option>
+            <option value="Gelding">Gelding</option>
+            <option value="Stallion">Stallion</option>
+          </select>
+          
+          <select id="trafficFilter">
+            <option value="">All Traffic</option>
+            <option value="Green">Green</option>
+            <option value="Yellow">Yellow</option>
+            <option value="Red">Red</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="loadingMessage" class="loading">Loading horses...</div>
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+      <div id="emptyMessage" class="empty-message" style="display: none;">
+        No horses found for this stable.
+      </div>
+
+      <div id="horsesContainer" class="horses-grid"></div>
+    </div>
+  </main>
+
+  <script>
+    let allHorses = [];
+    let currentStableId = null;
+
+    // Load horses when stable changes
+    window.addEventListener('stableChanged', (e) => {
+      currentStableId = e.detail.stableId;
+      loadHorses(currentStableId);
+    });
+
+    // Load horses on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      currentStableId = localStorage.getItem('selectedStable');
+      if (currentStableId) {
+        loadHorses(currentStableId);
+      } else {
+        document.getElementById('loadingMessage').textContent = 'Please select a stable';
+      }
+
+      // Setup filters
+      document.getElementById('searchInput').addEventListener('input', filterHorses);
+      document.getElementById('statusFilter').addEventListener('change', filterHorses);
+      document.getElementById('genderFilter').addEventListener('change', filterHorses);
+      document.getElementById('trafficFilter').addEventListener('change', filterHorses);
+    });
+
+    async function loadHorses(stableId) {
+      if (!stableId) return;
+
+      const loadingEl = document.getElementById('loadingMessage');
+      const errorEl = document.getElementById('errorMessage');
+      const emptyEl = document.getElementById('emptyMessage');
+      const containerEl = document.getElementById('horsesContainer');
+
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      emptyEl.style.display = 'none';
+      containerEl.innerHTML = '';
+
+      try {
+        const response = await fetch(`/api/user/horses/${stableId}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch horses');
+        }
+
+        allHorses = await response.json();
+        
+        // Sort by lastSession (most recent first)
+        allHorses.sort((a, b) => {
+          const dateA = a.lastSession ? new Date(a.lastSession) : new Date(0);
+          const dateB = b.lastSession ? new Date(b.lastSession) : new Date(0);
+          return dateB - dateA;
+        });
+
+        loadingEl.style.display = 'none';
+
+        if (allHorses.length === 0) {
+          emptyEl.style.display = 'block';
+        } else {
+          displayHorses(allHorses);
+        }
+      } catch (error) {
+        console.error('Error loading horses:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Error loading horses: ' + error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function filterHorses() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const genderFilter = document.getElementById('genderFilter').value;
+      const trafficFilter = document.getElementById('trafficFilter').value;
+
+      const filtered = allHorses.filter(horse => {
+        const matchesSearch = !searchTerm || 
+          (horse.name && horse.name.toLowerCase().includes(searchTerm)) ||
+          (horse.brand && horse.brand.toLowerCase().includes(searchTerm)) ||
+          (horse.rfid && horse.rfid.toLowerCase().includes(searchTerm));
+
+        const matchesStatus = !statusFilter || horse.status === statusFilter;
+        const matchesGender = !genderFilter || horse.gender === genderFilter;
+        const matchesTraffic = !trafficFilter || horse.traffic === trafficFilter;
+
+        return matchesSearch && matchesStatus && matchesGender && matchesTraffic;
+      });
+
+      displayHorses(filtered);
+    }
+
+    function displayHorses(horses) {
+      const container = document.getElementById('horsesContainer');
+      const emptyEl = document.getElementById('emptyMessage');
+
+      if (horses.length === 0) {
+        container.innerHTML = '';
+        emptyEl.textContent = 'No horses match your filters';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+
+      container.innerHTML = horses.map(horse => `
+        <div class="horse-card">
+          <div class="horse-header">
+            <div class="horse-name-section">
+              <h3 class="horse-name">${escapeHtml(horse.name || 'Unnamed')}</h3>
+              ${horse.alias ? `<span class="horse-alias">"${escapeHtml(horse.alias)}"</span>` : ''}
+            </div>
+            <div class="traffic-indicator traffic-${(horse.traffic || 'Green').toLowerCase()}">
+              ${horse.traffic || 'Green'}
+            </div>
+          </div>
+
+          <div class="horse-details">
+            <div class="detail-row">
+              <span class="label">Brand:</span>
+              <span class="value">${escapeHtml(horse.brand || 'N/A')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Gender:</span>
+              <span class="value">${escapeHtml(horse.gender || 'N/A')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Status:</span>
+              <span class="value status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">DOB:</span>
+              <span class="value">${formatDate(horse.dateOfBirth)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Last Session:</span>
+              <span class="value">${formatDateTime(horse.lastSession)}</span>
+            </div>
+            ${horse.rfid ? `
+            <div class="detail-row">
+              <span class="label">RFID:</span>
+              <span class="value">${escapeHtml(horse.rfid)}</span>
+            </div>
+            ` : ''}
+          </div>
+
+          <div class="horse-actions">
+            <button class="btn btn-sm btn-primary" onclick="viewHorse('${horse.id}')">View Details</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function viewHorse(horseId) {
+      // TODO: Navigate to horse detail page
+      alert('View horse: ' + horseId);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return 'N/A';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return 'Never';
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      
+      return date.toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

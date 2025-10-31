@@ -255,6 +255,15 @@ app.get('/dashboard', requireAuth, (req, res) => {
   });
 });
 
+// Horses page
+app.get('/horses', requireAuth, (req, res) => {
+  res.render('horses', {
+    user: req.user,
+    appName: process.env.APP_NAME,
+    demoMode: DEMO_MODE
+  });
+});
+
 // Logout
 app.get('/logout', async (req, res) => {
   const idToken = req.session.idToken;
@@ -282,6 +291,56 @@ app.get('/logout', async (req, res) => {
       res.redirect('/');
     }
   });
+});
+
+// Get horses by stable
+app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
+  const { stableId } = req.params;
+  
+  if (DEMO_MODE) {
+    return res.json([
+      {
+        id: '1',
+        name: 'Thunder',
+        dateOfBirth: '2018-03-15',
+        gender: 'Gelding',
+        status: 'Active',
+        lastSession: '2025-10-30T14:30:00',
+        traffic: 'Green',
+        brand: 'TB123',
+        stableId: stableId
+      },
+      {
+        id: '2',
+        name: 'Lightning',
+        dateOfBirth: '2019-05-20',
+        gender: 'Mare',
+        status: 'Active',
+        lastSession: '2025-10-29T10:15:00',
+        traffic: 'Yellow',
+        brand: 'TB456',
+        stableId: stableId
+      }
+    ]);
+  }
+
+  try {
+    const response = await axios.get(
+      `${apiConfig.baseUrl}/api/Horses/session/stableId/${stableId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${req.session.accessToken}`
+        }
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error('Horses API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch horses',
+      message: error.response?.data || error.message
+    });
+  }
 });
 
 // Get user's stables
