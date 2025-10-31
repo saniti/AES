@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Error - <%= appName %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><%= appName %></h1>
+      <nav>
+        <a href="/" class="btn btn-secondary">Home</a>
+      </nav>
+    </header>
+
+    <main class="error-page">
+      <div class="error-box">
+        <div class="error-icon">⚠️</div>
+        <h2><%= error %></h2>
+        <p><%= message %></p>
+        
+        <div class="error-actions">
+          <a href="/" class="btn btn-primary">Go Home</a>
+          <a href="/login" class="btn btn-secondary">Try Login Again</a>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>&copy; 2025 <%= appName %>. All rights reserved.</p>
+    </footer>
+  </div>
+</body>
+</html>

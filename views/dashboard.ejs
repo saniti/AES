@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - <%= appName %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><%= appName %></h1>
+      <nav>
+        <a href="/" class="btn btn-secondary">Home</a>
+        <a href="/logout" class="btn btn-secondary">Logout</a>
+      </nav>
+    </header>
+
+    <main class="dashboard">
+      <div class="dashboard-header">
+        <h2>Dashboard</h2>
+        <div class="user-badge">
+          <span class="user-icon">👤</span>
+          <div class="user-details">
+            <strong><%= user.name %></strong>
+            <small><%= user.email %></small>
+          </div>
+        </div>
+      </div>
+
+      <% if (demoMode) { %>
+        <div class="alert alert-info">
+          <strong>Demo Mode:</strong> You are viewing the dashboard in demo mode. API calls will return mock data.
+        </div>
+      <% } %>
+
+      <div class="dashboard-content">
+        <section class="auth-info">
+          <h3>Authentication Status</h3>
+          <div class="info-card">
+            <div class="info-row">
+              <span class="label">Status:</span>
+              <span class="value success">✓ Authenticated</span>
+            </div>
+            <div class="info-row">
+              <span class="label">User:</span>
+              <span class="value"><%= user.name %></span>
+            </div>
+            <div class="info-row">
+              <span class="label">Email:</span>
+              <span class="value"><%= user.email %></span>
+            </div>
+            <div class="info-row">
+              <span class="label">User ID:</span>
+              <span class="value"><code><%= user.sub %></code></span>
+            </div>
+          </div>
+        </section>
+
+        <section class="api-info">
+          <h3>API Integration</h3>
+          <div class="info-card">
+            <p>The application is configured to use the Alerte Equine API for data operations.</p>
+            <p><strong>Base URL:</strong> <code>https://alerteequinedashboard.azurewebsites.net</code></p>
+            
+            <div class="api-test">
+              <h4>Test API Connection</h4>
+              <button id="testApiBtn" class="btn btn-primary">Test API</button>
+              <div id="apiResult" class="api-result"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="next-steps">
+          <h3>Next Steps</h3>
+          <div class="info-card">
+            <p>This version focuses on authentication. Future versions will include:</p>
+            <ul>
+              <li>Horse management and tracking</li>
+              <li>Injury recording and monitoring</li>
+              <li>Document management</li>
+              <li>User administration</li>
+              <li>Data visualization and reporting</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <p>&copy; 2025 <%= appName %>. All rights reserved.</p>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById('testApiBtn').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('apiResult');
+      resultDiv.innerHTML = '<p>Testing API connection...</p>';
+      
+      try {
+        const response = await fetch('/api/Dropdowns/gender');
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <div class="success">
+              <strong>✓ API Connection Successful</strong>
+              <pre>${JSON.stringify(data, null, 2)}</pre>
+            </div>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <div class="error">
+              <strong>✗ API Error</strong>
+              <pre>${JSON.stringify(data, null, 2)}</pre>
+            </div>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="error">
+            <strong>✗ Connection Failed</strong>
+            <p>${error.message}</p>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>
