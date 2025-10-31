@@ -22,8 +22,20 @@ npm install
 
 ## Step 2: Generate SSL Certificates (1 minute)
 
+**For localhost:**
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 -subj '/CN=localhost' -keyout localhost-key.pem -out localhost-cert.pem -days 365
+```
+
+**For specific IP address (e.g., 192.168.254.58):**
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 365 -keyout localhost-key.pem -out localhost-cert.pem -subj "/CN=192.168.254.58" -addext "subjectAltName=IP:192.168.254.58,DNS:localhost"
+```
+
+Then update `.env` with your IP address:
+```env
+OAUTH_REDIRECT_URI=https://192.168.254.58:3000/auth-callback
+OAUTH_POST_LOGOUT_REDIRECT_URI=https://192.168.254.58:3000/
 ```
 
 ## Step 3: Start the Server (30 seconds)
