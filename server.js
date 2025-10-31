@@ -372,10 +372,15 @@ app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
   }
 
   try {
+    // Determine API endpoint based on days parameter
+    const apiEndpoint = days === 'all' 
+      ? `${apiConfig.baseUrl}/api/Recordings/sessionMeta/stable/${stableId}`
+      : `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}/${days}`;
+
     // Fetch both recordings and horses to map names
     const [recordingsResponse, horsesResponse] = await Promise.all([
       axios.get(
-        `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}/${days}`,
+        apiEndpoint,
         {
           headers: {
             'Authorization': `Bearer ${req.session.accessToken}`

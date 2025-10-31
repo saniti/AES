@@ -523,10 +523,122 @@ footer {
   border-radius: 8px;
 }
 
-.horses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+.horses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.horse-card-horizontal {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s;
+}
+
+.horse-card-horizontal:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.horse-main-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+}
+
+.horse-name-badge {
+  flex: 1;
+}
+
+.horse-name-badge .horse-name {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.horse-name-badge .horse-name-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.horse-name-badge .horse-name-link:hover {
+  color: var(--primary-color);
+}
+
+.horse-alias {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.horse-details-horizontal {
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
+  flex: 1;
+  align-items: center;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+}
+
+.detail-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.session-link {
+  color: var(--primary-color);
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.session-link:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+
+.horse-actions-horizontal {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-icon {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  transform: scale(1.1);
 }
 
 .horse-card {
@@ -565,28 +677,28 @@ footer {
   font-size: 13px;
   opacity: 0.9;
   font-style: italic;
-}
-
-.traffic-indicator {
+}.traffic-indicator {
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .traffic-green {
-  background: #48bb78;
+  background-color: #10b981;
   color: white;
 }
 
 .traffic-yellow {
-  background: #ecc94b;
-  color: #744210;
+  background-color: #f59e0b;
+  color: white;
 }
 
 .traffic-red {
-  background: #f56565;
+  background-color: #ef4444;
   color: white;
 }
 
@@ -1450,5 +1562,33 @@ footer {
 
   .dashboard-section {
     padding: 16px;
+  }
+}
+
+/* Mobile responsive for horizontal horse cards */
+@media (max-width: 768px) {
+  .horse-card-horizontal {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .horse-main-info {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .horse-details-horizontal {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .detail-item {
+    min-width: 70px;
+  }
+
+  .horse-actions-horizontal {
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: 0;
   }
 }

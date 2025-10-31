@@ -29,6 +29,7 @@
           <button class="filter-btn" data-days="30">Past 30 Days</button>
           <button class="filter-btn" data-days="60">Past 60 Days</button>
           <button class="filter-btn" data-days="90">Past 90 Days</button>
+          <button class="filter-btn" data-days="all">All</button>
         </div>
         
         <div class="search-filter">
@@ -83,7 +84,8 @@
         btn.addEventListener('click', () => {
           document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          currentDays = parseInt(btn.dataset.days);
+          const daysValue = btn.dataset.days;
+          currentDays = daysValue === 'all' ? 'all' : parseInt(daysValue);
           loadSessions(currentStableId, currentDays);
         });
       });

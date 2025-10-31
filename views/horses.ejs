@@ -54,7 +54,7 @@
         No horses found for this stable.
       </div>
 
-      <div id="horsesContainer" class="horses-grid"></div>
+      <div id="horsesContainer" class="horses-list"></div>
 
       <h2 style="margin-top: 40px; margin-bottom: 20px;">Unassigned Sessions</h2>
       <div id="unassignedLoading" class="loading" style="display: none;">Loading unassigned sessions...</div>
@@ -213,59 +213,62 @@
 
       emptyEl.style.display = 'none';
 
-      container.innerHTML = horses.map(horse => `
-        <div class="horse-card">
-          <div class="horse-header">
-            <div class="horse-name-section">
+      container.innerHTML = horses.map(horse => {
+        const age = calculateAge(horse.dateOfBirth);
+        return `
+        <div class="horse-card-horizontal">
+          <div class="horse-main-info">
+            <div class="horse-name-badge">
               <h3 class="horse-name">
                 <a href="/sessions?horseId=${horse.id}&horseName=${encodeURIComponent(horse.name || 'Unnamed')}" class="horse-name-link">
                   ${escapeHtml(horse.name || 'Unnamed')}
                 </a>
               </h3>
-              ${horse.alias ? `<span class="horse-alias">"${escapeHtml(horse.alias)}"</span>` : ''}
+              ${horse.alias ? `<span class="horse-alias">${escapeHtml(horse.alias)}</span>` : ''}
             </div>
             <div class="traffic-indicator traffic-${String(horse.traffic || 'Green').toLowerCase()}">
               ${String(horse.traffic || 'Green') === 'Green' ? 'Low Risk' : String(horse.traffic || 'Yellow') === 'Yellow' ? 'Medium Risk' : String(horse.traffic || 'Red') === 'Red' ? 'High Risk' : 'Low Risk'}
             </div>
           </div>
-
-          <div class="horse-details">
-            <div class="detail-row">
-              <span class="label">Brand:</span>
-              <span class="value">${escapeHtml(horse.brand || 'N/A')}</span>
+          
+          <div class="horse-details-horizontal">
+            <div class="detail-item">
+              <span class="detail-label">Brand</span>
+              <span class="detail-value">${escapeHtml(horse.brand || 'N/A')}</span>
             </div>
-            <div class="detail-row">
-              <span class="label">Gender:</span>
-              <span class="value">${escapeHtml(horse.gender || 'N/A')}</span>
+            <div class="detail-item">
+              <span class="detail-label">Gender</span>
+              <span class="detail-value">${escapeHtml(horse.gender || 'N/A')}</span>
             </div>
-            <div class="detail-row">
-              <span class="label">Status:</span>
-              <span class="value status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</span>
+            <div class="detail-item">
+              <span class="detail-label">Age</span>
+              <span class="detail-value">${age}</span>
             </div>
-            <div class="detail-row">
-              <span class="label">DOB:</span>
-              <span class="value">${formatDateLocal(horse.dateOfBirth)}</span>
+            <div class="detail-item">
+              <span class="detail-label">Status</span>
+              <span class="detail-value status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</span>
             </div>
-            <div class="detail-row">
-              <span class="label">Last Session:</span>
-              <span class="value" id="last-session-${horse.id}">
-                ${horse.lastSession ? `<span class="session-link" style="cursor: pointer;" onclick="goToLastSession('${horse.id}', '${horse.lastSession}')">${formatDateTime(horse.lastSession)}</span>` : 'Never'}
+            <div class="detail-item">
+              <span class="detail-label">Last Session</span>
+              <span class="detail-value">
+                ${horse.lastSession ? `<span class="session-link" onclick="goToLastSession('${horse.id}', '${horse.lastSession}')">${formatDateTimeShort(horse.lastSession)}</span>` : 'Never'}
               </span>
             </div>
             ${horse.rfid ? `
-            <div class="detail-row">
-              <span class="label">RFID:</span>
-              <span class="value">${escapeHtml(horse.rfid)}</span>
+            <div class="detail-item">
+              <span class="detail-label">RFID</span>
+              <span class="detail-value">${escapeHtml(horse.rfid)}</span>
             </div>
             ` : ''}
           </div>
 
-          <div class="horse-actions">
-            <button class="btn btn-sm btn-primary" onclick="editHorse('${horse.id}')">Edit</button>
-            <button class="btn btn-sm btn-secondary" onclick="viewSessions('${horse.id}', '${escapeHtml(horse.name)}')">View Sessions</button>
+          <div class="horse-actions-horizontal">
+            <button class="btn-icon" onclick="editHorse('${horse.id}')" title="Edit">✏️</button>
+            <button class="btn-icon" onclick="viewSessions('${horse.id}', '${escapeHtml(horse.name)}')" title="View Sessions">🏃</button>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function editHorse(horseId) {
@@ -350,12 +353,37 @@
       }
     }
 
+    function calculateAge(dateOfBirth) {
+      if (!dateOfBirth) return 'N/A';
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age >= 0 ? `${age} yrs` : 'N/A';
+    }
+
     function formatDateLocal(dateStr) {
       if (!dateStr) return 'N/A';
       const locale = getCurrentLocale();
       const date = new Date(dateStr);
       const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
       return date.toLocaleDateString(localeCode, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function formatDateTimeShort(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleString(localeCode, { 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     }
 
     function formatDateTime(dateStr) {
