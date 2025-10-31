@@ -1,0 +1,102 @@
+/* Theme System */
+:root[data-theme="default"] {
+  --primary-color: #2c5282;
+  --primary-hover: #1a365d;
+  --secondary-color: #718096;
+  --success-color: #38a169;
+  --error-color: #e53e3e;
+  --info-color: #3182ce;
+  --background: #f7fafc;
+  --card-background: #ffffff;
+  --text-primary: #2d3748;
+  --text-secondary: #718096;
+  --border-color: #e2e8f0;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --sidebar-bg: #2d3748;
+  --sidebar-hover: #4a5568;
+}
+
+:root[data-theme="dark"] {
+  --primary-color: #63b3ed;
+  --primary-hover: #4299e1;
+  --secondary-color: #a0aec0;
+  --success-color: #48bb78;
+  --error-color: #fc8181;
+  --info-color: #63b3ed;
+  --background: #1a202c;
+  --card-background: #2d3748;
+  --text-primary: #f7fafc;
+  --text-secondary: #a0aec0;
+  --border-color: #4a5568;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --sidebar-bg: #1a202c;
+  --sidebar-hover: #2d3748;
+}
+
+:root[data-theme="ocean"] {
+  --primary-color: #0891b2;
+  --primary-hover: #0e7490;
+  --secondary-color: #64748b;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --info-color: #06b6d4;
+  --background: #ecfeff;
+  --card-background: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border-color: #cbd5e1;
+  --shadow: 0 4px 6px rgba(8, 145, 178, 0.1);
+  --sidebar-bg: #164e63;
+  --sidebar-hover: #155e75;
+}
+
+:root[data-theme="forest"] {
+  --primary-color: #059669;
+  --primary-hover: #047857;
+  --secondary-color: #6b7280;
+  --success-color: #10b981;
+  --error-color: #dc2626;
+  --info-color: #14b8a6;
+  --background: #f0fdf4;
+  --card-background: #ffffff;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --border-color: #d1d5db;
+  --shadow: 0 4px 6px rgba(5, 150, 105, 0.1);
+  --sidebar-bg: #064e3b;
+  --sidebar-hover: #065f46;
+}
+
+:root[data-theme="sunset"] {
+  --primary-color: #dc2626;
+  --primary-hover: #b91c1c;
+  --secondary-color: #78716c;
+  --success-color: #16a34a;
+  --error-color: #dc2626;
+  --info-color: #f97316;
+  --background: #fff7ed;
+  --card-background: #ffffff;
+  --text-primary: #1c1917;
+  --text-secondary: #78716c;
+  --border-color: #e7e5e4;
+  --shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
+  --sidebar-bg: #7c2d12;
+  --sidebar-hover: #9a3412;
+}
+
+:root[data-theme="purple"] {
+  --primary-color: #7c3aed;
+  --primary-hover: #6d28d9;
+  --secondary-color: #71717a;
+  --success-color: #22c55e;
+  --error-color: #ef4444;
+  --info-color: #a855f7;
+  --background: #faf5ff;
+  --card-background: #ffffff;
+  --text-primary: #18181b;
+  --text-secondary: #71717a;
+  --border-color: #e4e4e7;
+  --shadow: 0 4px 6px rgba(124, 58, 237, 0.1);
+  --sidebar-bg: #581c87;
+  --sidebar-hover: #6b21a8;
+}

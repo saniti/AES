@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Detail - <%= appName %></title>
+  <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/locale.js"></script>
+</head>
+<body class="with-sidebar">
+  <%- include('nav', { user: user }) %>
+
+  <main class="main-content">
+    <header class="top-header">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <a href="/sessions" class="btn btn-secondary" style="text-decoration: none;">← Back to Sessions</a>
+        <h1>Session Performance</h1>
+      </div>
+    </header>
+
+    <div class="content-wrapper">
+      <% if (demoMode) { %>
+        <div class="alert alert-info">
+          <strong>Demo Mode:</strong> Showing demo session data.
+        </div>
+      <% } %>
+
+      <div id="loadingMessage" class="loading">Loading session details...</div>
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+      <div id="sessionContent" style="display: none;">
+        <div class="session-detail-header">
+          <div class="session-title">
+            <h2 id="horseName">Horse Name</h2>
+            <div class="session-meta">
+              <span id="sessionDate"></span>
+              <span class="separator">•</span>
+              <span id="sessionDuration"></span>
+            </div>
+          </div>
+          <div id="trafficBadge" class="traffic-indicator"></div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3>Session Information</h3>
+            <div class="detail-rows">
+              <div class="detail-row">
+                <span class="label">Start Time:</span>
+                <span class="value" id="startTime"></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">End Time:</span>
+                <span class="value" id="stopTime"></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Rider:</span>
+                <span class="value" id="rider"></span>
+              </div>
+              <div class="detail-row">
+                <span class="label">Track:</span>
+                <span class="value" id="track"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <h3>Performance Metrics</h3>
+            <div id="metricsContent" class="metrics-content">
+              <p style="color: var(--text-secondary);">Loading performance data...</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions-section">
+          <a href="#" id="viewHorseLink" class="btn btn-primary">View Horse Profile</a>
+          <button class="btn btn-secondary" onclick="downloadReport()">Download Report</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const recordingId = '<%= recordingId %>';
+    let sessionData = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSessionDetail();
+    });
+
+    async function loadSessionDetail() {
+      const loadingEl = document.getElementById('loadingMessage');
+      const errorEl = document.getElementById('errorMessage');
+      const contentEl = document.getElementById('sessionContent');
+
+      try {
+        const response = await fetch(`/api/user/session/${recordingId}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch session details');
+        }
+
+        sessionData = await response.json();
+        
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+
+        displaySessionDetail(sessionData);
+      } catch (error) {
+        console.error('Error loading session:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Error loading session: ' + error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function displaySessionDetail(session) {
+      // Header
+      document.getElementById('horseName').textContent = session.horseName || 'Unknown Horse';
+      document.getElementById('sessionDate').textContent = formatDateTime(session.startTime);
+      document.getElementById('sessionDuration').textContent = calculateDuration(session.startTime, session.stopTime);
+
+      // Injury risk badge
+      const trafficBadge = document.getElementById('trafficBadge');
+      const injuryLevel = String(session.trafficLight || session.injuryLevel || 'Green');
+      const riskLabel = injuryLevel === 'Green' ? 'Low Risk' : injuryLevel === 'Yellow' ? 'Medium Risk' : injuryLevel === 'Red' ? 'High Risk' : 'Low Risk';
+      trafficBadge.textContent = riskLabel;
+      trafficBadge.className = `traffic-indicator traffic-${injuryLevel.toLowerCase()}`;
+
+      // Session info
+      document.getElementById('startTime').textContent = formatFullDateTime(session.startTime);
+      document.getElementById('stopTime').textContent = formatFullDateTime(session.stopTime);
+      document.getElementById('rider').textContent = session.riderName || session.rider || 'Not specified';
+      document.getElementById('track').textContent = session.track || 'Not specified';
+
+      // View horse link
+      if (session.horseId) {
+        document.getElementById('viewHorseLink').href = `/sessions?horseId=${session.horseId}&horseName=${encodeURIComponent(session.horseName || 'Horse')}`;
+      }
+
+      // Load metrics if available
+      loadMetrics(session);
+    }
+
+    function loadMetrics(session) {
+      const metricsEl = document.getElementById('metricsContent');
+      
+      // Display available metrics from session data
+      let metricsHTML = '<div class="metrics-grid">';
+      
+      if (session.duration) {
+        metricsHTML += `
+          <div class="metric-item">
+            <div class="metric-label">Duration</div>
+            <div class="metric-value">${Math.round(session.duration / 60)} min</div>
+          </div>
+        `;
+      }
+
+      if (session.distance) {
+        metricsHTML += `
+          <div class="metric-item">
+            <div class="metric-label">Distance</div>
+            <div class="metric-value">${session.distance.toFixed(2)} km</div>
+          </div>
+        `;
+      }
+
+      if (session.averageSpeed) {
+        metricsHTML += `
+          <div class="metric-item">
+            <div class="metric-label">Avg Speed</div>
+            <div class="metric-value">${session.averageSpeed.toFixed(1)} km/h</div>
+          </div>
+        `;
+      }
+
+      if (session.maxSpeed) {
+        metricsHTML += `
+          <div class="metric-item">
+            <div class="metric-label">Max Speed</div>
+            <div class="metric-value">${session.maxSpeed.toFixed(1)} km/h</div>
+          </div>
+        `;
+      }
+
+      if (session.averageHeartRate) {
+        metricsHTML += `
+          <div class="metric-item">
+            <div class="metric-label">Avg Heart Rate</div>
+            <div class="metric-value">${Math.round(session.averageHeartRate)} bpm</div>
+          </div>
+        `;
+      }
+
+      if (session.maxHeartRate) {
+        metricsHTML += `
+          <div class="metric-item">
+            <div class="metric-label">Max Heart Rate</div>
+            <div class="metric-value">${Math.round(session.maxHeartRate)} bpm</div>
+          </div>
+        `;
+      }
+
+      metricsHTML += '</div>';
+
+      if (metricsHTML === '<div class="metrics-grid"></div>') {
+        metricsEl.innerHTML = '<p style="color: var(--text-secondary);">No performance metrics available for this session.</p>';
+      } else {
+        metricsEl.innerHTML = metricsHTML;
+      }
+    }
+
+    function downloadReport() {
+      // TODO: Implement PDF download
+      alert('Report download functionality coming soon');
+    }
+
+    function calculateDuration(startTime, stopTime) {
+      if (!startTime || !stopTime) return 'N/A';
+      const start = new Date(startTime);
+      const stop = new Date(stopTime);
+      const diffMs = stop - start;
+      const diffMins = Math.floor(diffMs / 60000);
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      
+      if (hours > 0) {
+        return `${hours}h ${mins}m`;
+      }
+      return `${mins}m`;
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleDateString(localeCode, { 
+        weekday: 'long',
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+
+    function formatFullDateTime(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleString(localeCode, { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  </script>
+</body>
+</html>

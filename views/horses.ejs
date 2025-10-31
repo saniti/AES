@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horses - <%= appName %></title>
+  <link rel="stylesheet" href="/css/themes.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/locale.js"></script>
+</head>
+<body class="with-sidebar">
+  <%- include('nav', { user: user }) %>
+
+  <main class="main-content">
+    <header class="top-header">
+      <h1>Horses</h1>
+    </header>
+
+    <div class="content-wrapper">
+      <% if (demoMode) { %>
+        <div class="alert alert-info">
+          <strong>Demo Mode:</strong> Showing demo horse data.
+        </div>
+      <% } %>
+
+      <div class="horses-controls">
+        <div class="filters">
+          <input type="text" id="searchInput" placeholder="Search by name, brand, or RFID..." />
+          <select id="statusFilter">
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Retired">Retired</option>
+          </select>
+          <select id="genderFilter">
+            <option value="">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Gelding">Gelding</option>
+          </select>
+          <select id="injuryRiskFilter">
+            <option value="">All Injury Risks</option>
+            <option value="Green">Low Risk (Green)</option>
+            <option value="Yellow">Medium Risk (Yellow)</option>
+            <option value="Red">High Risk (Red)</option>
+            <option value="None">No Assessment</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="loadingMessage" class="loading">Loading horses...</div>
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+      <div id="emptyMessage" class="empty-message" style="display: none;">
+        No horses found for this stable.
+      </div>
+
+      <div id="horsesContainer" class="horses-grid"></div>
+
+      <h2 style="margin-top: 40px; margin-bottom: 20px;">Unassigned Sessions</h2>
+      <div id="unassignedLoading" class="loading" style="display: none;">Loading unassigned sessions...</div>
+      <div id="unassignedEmpty" class="empty-message" style="display: none;">No unassigned sessions</div>
+      <div id="unassignedContainer" class="unassigned-sessions"></div>
+    </div>
+  </main>
+
+  <!-- Edit Horse Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Horse</h2>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editHorseId" />
+        
+        <div class="form-group">
+          <label for="editHorseName">Name *</label>
+          <input type="text" id="editHorseName" required />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseAlias">Alias</label>
+          <input type="text" id="editHorseAlias" />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseBrand">Brand</label>
+          <input type="text" id="editHorseBrand" />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseRfid">RFID</label>
+          <input type="text" id="editHorseRfid" />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseDob">Date of Birth</label>
+          <input type="date" id="editHorseDob" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveHorse()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allHorses = [];
+    let currentStableId = null;
+
+    // Load horses when stable changes
+    window.addEventListener('stableChanged', (e) => {
+      currentStableId = e.detail.stableId;
+      loadHorses(currentStableId);
+      loadUnassignedSessions(currentStableId);
+    });
+
+    // Load horses on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      currentStableId = localStorage.getItem('selectedStable');
+      if (currentStableId) {
+        loadHorses(currentStableId);
+        loadUnassignedSessions(currentStableId);
+      } else {
+        document.getElementById('loadingMessage').textContent = 'Please select a stable';
+      }
+
+      // Setup filters
+      document.getElementById('searchInput').addEventListener('input', filterHorses);
+      document.getElementById('statusFilter').addEventListener('change', filterHorses);
+      document.getElementById('genderFilter').addEventListener('change', filterHorses);
+      document.getElementById('injuryRiskFilter').addEventListener('change', filterHorses);
+    });
+
+    async function loadHorses(stableId) {
+      if (!stableId) return;
+
+      const loadingEl = document.getElementById('loadingMessage');
+      const errorEl = document.getElementById('errorMessage');
+      const emptyEl = document.getElementById('emptyMessage');
+      const containerEl = document.getElementById('horsesContainer');
+
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      emptyEl.style.display = 'none';
+      containerEl.innerHTML = '';
+
+      try {
+        const response = await fetch(`/api/user/horses/${stableId}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch horses');
+        }
+
+        allHorses = await response.json();
+        
+        // Sort by lastSession (most recent first)
+        allHorses.sort((a, b) => {
+          const dateA = a.lastSession ? new Date(a.lastSession) : new Date(0);
+          const dateB = b.lastSession ? new Date(b.lastSession) : new Date(0);
+          return dateB - dateA;
+        });
+
+        loadingEl.style.display = 'none';
+
+        if (allHorses.length === 0) {
+          emptyEl.style.display = 'block';
+        } else {
+          displayHorses(allHorses);
+        }
+      } catch (error) {
+        console.error('Error loading horses:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Error loading horses: ' + error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function filterHorses() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const genderFilter = document.getElementById('genderFilter').value;
+      const injuryRiskFilter = document.getElementById('injuryRiskFilter').value;
+
+      const filtered = allHorses.filter(horse => {
+        const matchesSearch = !searchTerm || 
+          (horse.name && horse.name.toLowerCase().includes(searchTerm)) ||
+          (horse.brand && horse.brand.toLowerCase().includes(searchTerm)) ||
+          (horse.rfid && horse.rfid.toLowerCase().includes(searchTerm));
+
+        const matchesStatus = !statusFilter || horse.status === statusFilter;
+        const matchesGender = !genderFilter || horse.gender === genderFilter;
+        const matchesInjuryRisk = !injuryRiskFilter || 
+          (injuryRiskFilter === 'None' ? !horse.traffic : horse.traffic === injuryRiskFilter);
+
+        return matchesSearch && matchesStatus && matchesGender && matchesInjuryRisk;
+      });
+
+      displayHorses(filtered);
+    }
+
+    function displayHorses(horses) {
+      const container = document.getElementById('horsesContainer');
+      const emptyEl = document.getElementById('emptyMessage');
+
+      if (horses.length === 0) {
+        container.innerHTML = '';
+        emptyEl.textContent = 'No horses match your filters';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+
+      container.innerHTML = horses.map(horse => `
+        <div class="horse-card">
+          <div class="horse-header">
+            <div class="horse-name-section">
+              <h3 class="horse-name">
+                <a href="/sessions?horseId=${horse.id}&horseName=${encodeURIComponent(horse.name || 'Unnamed')}" class="horse-name-link">
+                  ${escapeHtml(horse.name || 'Unnamed')}
+                </a>
+              </h3>
+              ${horse.alias ? `<span class="horse-alias">"${escapeHtml(horse.alias)}"</span>` : ''}
+            </div>
+            <div class="traffic-indicator traffic-${String(horse.traffic || 'Green').toLowerCase()}">
+              ${String(horse.traffic || 'Green') === 'Green' ? 'Low Risk' : String(horse.traffic || 'Yellow') === 'Yellow' ? 'Medium Risk' : String(horse.traffic || 'Red') === 'Red' ? 'High Risk' : 'Low Risk'}
+            </div>
+          </div>
+
+          <div class="horse-details">
+            <div class="detail-row">
+              <span class="label">Brand:</span>
+              <span class="value">${escapeHtml(horse.brand || 'N/A')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Gender:</span>
+              <span class="value">${escapeHtml(horse.gender || 'N/A')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Status:</span>
+              <span class="value status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">DOB:</span>
+              <span class="value">${formatDateLocal(horse.dateOfBirth)}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Last Session:</span>
+              <span class="value" id="last-session-${horse.id}">
+                ${horse.lastSession ? `<span class="session-link" style="cursor: pointer;" onclick="goToLastSession('${horse.id}', '${horse.lastSession}')">${formatDateTime(horse.lastSession)}</span>` : 'Never'}
+              </span>
+            </div>
+            ${horse.rfid ? `
+            <div class="detail-row">
+              <span class="label">RFID:</span>
+              <span class="value">${escapeHtml(horse.rfid)}</span>
+            </div>
+            ` : ''}
+          </div>
+
+          <div class="horse-actions">
+            <button class="btn btn-sm btn-primary" onclick="editHorse('${horse.id}')">Edit</button>
+            <button class="btn btn-sm btn-secondary" onclick="viewSessions('${horse.id}', '${escapeHtml(horse.name)}')">View Sessions</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function editHorse(horseId) {
+      const horse = allHorses.find(h => h.id === horseId);
+      if (!horse) return;
+
+      // Populate modal
+      document.getElementById('editHorseId').value = horse.id;
+      document.getElementById('editHorseName').value = horse.name || '';
+      document.getElementById('editHorseAlias').value = horse.alias || '';
+      document.getElementById('editHorseBrand').value = horse.brand || '';
+      document.getElementById('editHorseRfid').value = horse.rfid || '';
+      document.getElementById('editHorseDob').value = horse.dateOfBirth ? horse.dateOfBirth.split('T')[0] : '';
+      
+      // Show modal
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function viewSessions(horseId, horseName) {
+      window.location.href = `/sessions?horseId=${horseId}&horseName=${encodeURIComponent(horseName)}`;
+    }
+
+    async function goToLastSession(horseId, lastSessionDate) {
+      // Fetch sessions for this horse to find the matching recording ID
+      try {
+        const response = await fetch(`/api/user/sessions/${currentStableId}/7`);
+        if (!response.ok) throw new Error('Failed to fetch sessions');
+        
+        const sessions = await response.json();
+        
+        // Find session matching horse and date
+        const matchingSession = sessions.find(s => 
+          String(s.horseId) === String(horseId) && 
+          new Date(s.startTime).getTime() === new Date(lastSessionDate).getTime()
+        );
+        
+        if (matchingSession) {
+          window.location.href = `/session/${matchingSession.id}`;
+        } else {
+          // Fallback to filtered sessions view
+          window.location.href = `/sessions?horseId=${horseId}&date=${lastSessionDate}`;
+        }
+      } catch (error) {
+        console.error('Error finding session:', error);
+        alert('Could not find session details');
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    async function saveHorse() {
+      const horseId = document.getElementById('editHorseId').value;
+      const data = {
+        name: document.getElementById('editHorseName').value,
+        alias: document.getElementById('editHorseAlias').value,
+        brand: document.getElementById('editHorseBrand').value,
+        rfid: document.getElementById('editHorseRfid').value,
+        dateOfBirth: document.getElementById('editHorseDob').value
+      };
+
+      try {
+        const response = await fetch(`/api/user/horses/${horseId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update horse');
+        }
+
+        alert('Horse updated successfully');
+        closeEditModal();
+        loadHorses(currentStableId);
+      } catch (error) {
+        console.error('Error updating horse:', error);
+        alert('Error updating horse: ' + error.message);
+      }
+    }
+
+    function formatDateLocal(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleDateString(localeCode, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return 'N/A';
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+      
+      const locale = getCurrentLocale();
+      const translations = {
+        'en-AU': { today: 'Today', yesterday: 'Yesterday', daysAgo: 'days ago' },
+        'en-US': { today: 'Today', yesterday: 'Yesterday', daysAgo: 'days ago' },
+        'es-ES': { today: 'Hoy', yesterday: 'Ayer', daysAgo: 'días atrás' }
+      };
+      const t = translations[locale] || translations['en-AU'];
+      
+      if (diffDays === 0) return t.today;
+      if (diffDays === 1) return t.yesterday;
+      if (diffDays < 7) return `${diffDays} ${t.daysAgo}`;
+      
+      return formatDateLocal(dateStr);
+    }
+
+    function formatDateTimeLocal(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleDateString(localeCode, { 
+        weekday: 'short',
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    async function loadUnassignedSessions(stableId) {
+      if (!stableId) return;
+
+      const loadingEl = document.getElementById('unassignedLoading');
+      const emptyEl = document.getElementById('unassignedEmpty');
+      const containerEl = document.getElementById('unassignedContainer');
+
+      loadingEl.style.display = 'block';
+      emptyEl.style.display = 'none';
+      containerEl.innerHTML = '';
+
+      try {
+        const response = await fetch(`/api/user/sessions/unassigned/${stableId}`);
+        
+        if (!response.ok) {
+          // If 404 or other error, just show empty
+          loadingEl.style.display = 'none';
+          emptyEl.style.display = 'block';
+          return;
+        }
+
+        const sessions = await response.json();
+        
+        loadingEl.style.display = 'none';
+
+        if (sessions.length === 0) {
+          emptyEl.style.display = 'block';
+        } else {
+          displayUnassignedSessions(sessions);
+        }
+      } catch (error) {
+        console.error('Error loading unassigned sessions:', error);
+        loadingEl.style.display = 'none';
+        emptyEl.textContent = 'Error loading unassigned sessions';
+        emptyEl.style.display = 'block';
+      }
+    }
+
+    function displayUnassignedSessions(sessions) {
+      const container = document.getElementById('unassignedContainer');
+
+      container.innerHTML = sessions.map(session => {
+        const duration = calculateDuration(session.startTime, session.stopTime);
+        return `
+          <div class="unassigned-session-card">
+            <div class="session-info-section">
+              <div class="session-time">
+                <strong>${formatDateTimeLocal(session.startTime)}</strong>
+                <span class="duration">${duration}</span>
+              </div>
+              ${session.rider ? `<div class="session-rider">Rider: ${escapeHtml(session.rider)}</div>` : ''}
+              ${session.track ? `<div class="session-track">Track: ${escapeHtml(session.track)}</div>` : ''}
+            </div>
+            <div class="session-assign-section">
+              <select class="horse-select" id="horse-select-${session.id}">
+                <option value="">Select horse...</option>
+                ${allHorses.map(horse => `<option value="${horse.id}">${escapeHtml(horse.name)}</option>`).join('')}
+              </select>
+              <button class="btn btn-sm btn-primary" onclick="assignHorse('${session.id}')">
+                Assign
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function assignHorse(sessionId) {
+      const selectEl = document.getElementById(`horse-select-${sessionId}`);
+      const horseId = selectEl.value;
+
+      if (!horseId) {
+        alert('Please select a horse');
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/user/sessions/assign/${currentStableId}/${sessionId}/${horseId}`,
+          { method: 'POST' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to assign horse');
+        }
+
+        alert('Horse assigned successfully');
+        loadUnassignedSessions(currentStableId);
+        loadHorses(currentStableId);
+      } catch (error) {
+        console.error('Error assigning horse:', error);
+        alert('Error assigning horse: ' + error.message);
+      }
+    }
+
+    function calculateDuration(startTime, stopTime) {
+      if (!startTime || !stopTime) return 'N/A';
+      const start = new Date(startTime);
+      const stop = new Date(stopTime);
+      const diffMs = stop - start;
+      const diffMins = Math.floor(diffMs / 60000);
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      
+      if (hours > 0) {
+        return `${hours}h ${mins}m`;
+      }
+      return `${mins}m`;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
