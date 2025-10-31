@@ -927,3 +927,93 @@ footer {
     width: 95%;
   }
 }
+
+/* Unassigned Sessions */
+.unassigned-sessions {
+  display: grid;
+  gap: 15px;
+}
+
+.unassigned-session-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border-left: 4px solid #f59e0b;
+}
+
+.session-info-section {
+  flex: 1;
+}
+
+.session-time {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+.session-time strong {
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.duration {
+  background: var(--background);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.session-rider,
+.session-track {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.session-assign-section {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 300px;
+}
+
+.horse-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.horse-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+  .unassigned-session-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .session-assign-section {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .session-time {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

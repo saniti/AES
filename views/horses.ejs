@@ -57,6 +57,11 @@
       </div>
 
       <div id="horsesContainer" class="horses-grid"></div>
+
+      <h2 style="margin-top: 40px; margin-bottom: 20px;">Unassigned Sessions</h2>
+      <div id="unassignedLoading" class="loading" style="display: none;">Loading unassigned sessions...</div>
+      <div id="unassignedEmpty" class="empty-message" style="display: none;">No unassigned sessions</div>
+      <div id="unassignedContainer" class="unassigned-sessions"></div>
     </div>
   </main>
 
@@ -110,6 +115,7 @@
     window.addEventListener('stableChanged', (e) => {
       currentStableId = e.detail.stableId;
       loadHorses(currentStableId);
+      loadUnassignedSessions(currentStableId);
     });
 
     // Load horses on page load
@@ -117,6 +123,7 @@
       currentStableId = localStorage.getItem('selectedStable');
       if (currentStableId) {
         loadHorses(currentStableId);
+        loadUnassignedSessions(currentStableId);
       } else {
         document.getElementById('loadingMessage').textContent = 'Please select a stable';
       }
@@ -336,6 +343,113 @@
       if (diffDays < 7) return `${diffDays} days ago`;
       
       return date.toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    async function loadUnassignedSessions(stableId) {
+      if (!stableId) return;
+
+      const loadingEl = document.getElementById('unassignedLoading');
+      const emptyEl = document.getElementById('unassignedEmpty');
+      const containerEl = document.getElementById('unassignedContainer');
+
+      loadingEl.style.display = 'block';
+      emptyEl.style.display = 'none';
+      containerEl.innerHTML = '';
+
+      try {
+        const response = await fetch(`/api/user/sessions/unassigned/${stableId}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch unassigned sessions');
+        }
+
+        const sessions = await response.json();
+        
+        loadingEl.style.display = 'none';
+
+        if (sessions.length === 0) {
+          emptyEl.style.display = 'block';
+        } else {
+          displayUnassignedSessions(sessions);
+        }
+      } catch (error) {
+        console.error('Error loading unassigned sessions:', error);
+        loadingEl.style.display = 'none';
+        emptyEl.textContent = 'Error loading unassigned sessions';
+        emptyEl.style.display = 'block';
+      }
+    }
+
+    function displayUnassignedSessions(sessions) {
+      const container = document.getElementById('unassignedContainer');
+
+      container.innerHTML = sessions.map(session => {
+        const duration = calculateDuration(session.startTime, session.stopTime);
+        return `
+          <div class="unassigned-session-card">
+            <div class="session-info-section">
+              <div class="session-time">
+                <strong>${formatDateTime(session.startTime)}</strong>
+                <span class="duration">${duration}</span>
+              </div>
+              ${session.rider ? `<div class="session-rider">Rider: ${escapeHtml(session.rider)}</div>` : ''}
+              ${session.track ? `<div class="session-track">Track: ${escapeHtml(session.track)}</div>` : ''}
+            </div>
+            <div class="session-assign-section">
+              <select class="horse-select" id="horse-select-${session.id}">
+                <option value="">Select horse...</option>
+                ${allHorses.map(horse => `<option value="${horse.id}">${escapeHtml(horse.name)}</option>`).join('')}
+              </select>
+              <button class="btn btn-sm btn-primary" onclick="assignHorse('${session.id}')">
+                Assign
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function assignHorse(sessionId) {
+      const selectEl = document.getElementById(`horse-select-${sessionId}`);
+      const horseId = selectEl.value;
+
+      if (!horseId) {
+        alert('Please select a horse');
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/user/sessions/assign/${currentStableId}/${sessionId}/${horseId}`,
+          { method: 'POST' }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to assign horse');
+        }
+
+        alert('Horse assigned successfully');
+        loadUnassignedSessions(currentStableId);
+        loadHorses(currentStableId);
+      } catch (error) {
+        console.error('Error assigning horse:', error);
+        alert('Error assigning horse: ' + error.message);
+      }
+    }
+
+    function calculateDuration(startTime, stopTime) {
+      if (!startTime || !stopTime) return 'N/A';
+      const start = new Date(startTime);
+      const stop = new Date(stopTime);
+      const diffMs = stop - start;
+      const diffMins = Math.floor(diffMs / 60000);
+      const hours = Math.floor(diffMins / 60);
+      const mins = diffMins % 60;
+      
+      if (hours > 0) {
+        return `${hours}h ${mins}m`;
+      }
+      return `${mins}m`;
     }
 
     function escapeHtml(text) {

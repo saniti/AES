@@ -362,8 +362,74 @@ app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
   }
 
   try {
+    // Fetch both recordings and horses to map names
+    const [recordingsResponse, horsesResponse] = await Promise.all([
+      axios.get(
+        `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}/${days}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${req.session.accessToken}`
+          }
+        }
+      ),
+      axios.get(
+        `${apiConfig.baseUrl}/api/Horses/session/stableId/${stableId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${req.session.accessToken}`
+          }
+        }
+      )
+    ]);
+
+    const recordings = recordingsResponse.data;
+    const horses = horsesResponse.data;
+
+    // Create horse lookup map
+    const horseMap = {};
+    horses.forEach(horse => {
+      horseMap[horse.id] = horse.name;
+    });
+
+    // Add horse names to recordings
+    const enrichedRecordings = recordings.map(recording => ({
+      ...recording,
+      horseName: recording.horseId ? horseMap[recording.horseId] : null
+    }));
+
+    res.json(enrichedRecordings);
+  } catch (error) {
+    console.error('Sessions API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch sessions',
+      message: error.response?.data || error.message
+    });
+  }
+});
+
+// Get unassigned sessions
+app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res) => {
+  const { stableId } = req.params;
+  
+  if (DEMO_MODE) {
+    const now = new Date();
+    return res.json([
+      {
+        id: 'unrec1',
+        horseId: null,
+        horseName: null,
+        startTime: new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        stopTime: new Date(now - 1 * 24 * 60 * 60 * 1000 + 2700000).toISOString(),
+        rider: 'Unknown',
+        track: 'Dirt',
+        trafficLight: 'Green'
+      }
+    ]);
+  }
+
+  try {
     const response = await axios.get(
-      `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}/${days}`,
+      `${apiConfig.baseUrl}/api/Recordings/unassigned/session/stable/${stableId}`,
       {
         headers: {
           'Authorization': `Bearer ${req.session.accessToken}`
@@ -372,9 +438,37 @@ app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
     );
     res.json(response.data);
   } catch (error) {
-    console.error('Sessions API error:', error.response?.data || error.message);
+    console.error('Unassigned sessions API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch sessions',
+      error: 'Failed to fetch unassigned sessions',
+      message: error.response?.data || error.message
+    });
+  }
+});
+
+// Assign horse to session
+app.post('/api/user/sessions/assign/:stableId/:recordingId/:horseId', requireAuth, async (req, res) => {
+  const { stableId, recordingId, horseId } = req.params;
+  
+  if (DEMO_MODE) {
+    return res.json({ success: true, message: 'Demo mode - session not actually assigned' });
+  }
+
+  try {
+    const response = await axios.post(
+      `${apiConfig.baseUrl}/api/Recordings/reassign/${stableId}/${recordingId}/${horseId}`,
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${req.session.accessToken}`
+        }
+      }
+    );
+    res.json({ success: true, data: response.data });
+  } catch (error) {
+    console.error('Assign session error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to assign session',
       message: error.response?.data || error.message
     });
   }
