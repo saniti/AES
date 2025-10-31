@@ -3,11 +3,15 @@ const express = require('express');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const axios = require('axios');
-const crypto = require('crypto');
+const { Issuer, generators } = require('openid-client');
 const path = require('path');
+const https = require('https');
+const http = require('http');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
 // Middleware
 app.use(express.json());
@@ -18,7 +22,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Set to true if using HTTPS
+    secure: USE_HTTPS, // Set to true when using HTTPS
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
@@ -31,19 +35,6 @@ app.set('views', path.join(__dirname, 'views'));
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// OAuth Configuration
-const oauthConfig = {
-  authority: process.env.OAUTH_AUTHORITY,
-  clientId: process.env.OAUTH_CLIENT_ID,
-  redirectUri: process.env.OAUTH_REDIRECT_URI,
-  postLogoutRedirectUri: process.env.OAUTH_POST_LOGOUT_REDIRECT_URI,
-  scope: process.env.OAUTH_SCOPE,
-  authorizationEndpoint: `${process.env.OAUTH_AUTHORITY}/connect/authorize`,
-  tokenEndpoint: `${process.env.OAUTH_AUTHORITY}/connect/token`,
-  userInfoEndpoint: `${process.env.OAUTH_AUTHORITY}/connect/userinfo`,
-  endSessionEndpoint: `${process.env.OAUTH_AUTHORITY}/connect/endsession`
-};
-
 // API Configuration
 const apiConfig = {
   baseUrl: process.env.API_BASE_URL
@@ -51,6 +42,40 @@ const apiConfig = {
 
 // Demo mode flag
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
+
+// OAuth client - will be initialized asynchronously
+let oidcClient = null;
+
+// Initialize OIDC client
+async function initializeOIDC() {
+  try {
+    const issuer = await Issuer.discover(process.env.OAUTH_AUTHORITY);
+    console.log('Discovered issuer:', issuer.metadata.issuer);
+    
+    oidcClient = new issuer.Client({
+      client_id: process.env.OAUTH_CLIENT_ID,
+      redirect_uris: [process.env.OAUTH_REDIRECT_URI],
+      response_types: ['code'],
+      token_endpoint_auth_method: 'none' // Public client - no client secret
+    });
+    
+    console.log('OIDC client initialized successfully');
+    console.log('Redirect URI:', process.env.OAUTH_REDIRECT_URI);
+  } catch (error) {
+    console.error('Failed to initialize OIDC client:', error);
+    if (!DEMO_MODE) {
+      throw error;
+    }
+  }
+}
+
+// Initialize OIDC on startup (unless in demo mode)
+if (!DEMO_MODE) {
+  initializeOIDC().catch(err => {
+    console.error('OIDC initialization failed:', err);
+    process.exit(1);
+  });
+}
 
 // Middleware to check authentication
 function requireAuth(req, res, next) {
@@ -69,25 +94,6 @@ function requireAuth(req, res, next) {
   }
   req.user = req.session.user;
   next();
-}
-
-// Helper function to generate random string
-function generateRandomString(length) {
-  return crypto.randomBytes(length).toString('hex');
-}
-
-// Helper function to generate code verifier and challenge for PKCE
-function generatePKCE() {
-  const codeVerifier = generateRandomString(32);
-  const codeChallenge = crypto
-    .createHash('sha256')
-    .update(codeVerifier)
-    .digest('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-  
-  return { codeVerifier, codeChallenge };
 }
 
 // Routes
@@ -119,7 +125,7 @@ app.get('/login', (req, res) => {
 });
 
 // Initiate OAuth flow
-app.get('/auth/login', (req, res) => {
+app.get('/auth/login', async (req, res) => {
   if (DEMO_MODE) {
     req.session.user = {
       name: 'Demo User',
@@ -130,45 +136,63 @@ app.get('/auth/login', (req, res) => {
     return res.redirect('/dashboard');
   }
 
-  const state = generateRandomString(16);
-  const nonce = generateRandomString(16);
-  const { codeVerifier, codeChallenge } = generatePKCE();
+  if (!oidcClient) {
+    return res.render('error', {
+      appName: process.env.APP_NAME,
+      error: 'Configuration Error',
+      message: 'OIDC client not initialized. Please try again later.'
+    });
+  }
 
-  // Store state, nonce, and code verifier in session
-  req.session.oauthState = state;
-  req.session.oauthNonce = nonce;
-  req.session.codeVerifier = codeVerifier;
+  try {
+    // Generate PKCE parameters
+    const codeVerifier = generators.codeVerifier();
+    const codeChallenge = generators.codeChallenge(codeVerifier);
+    const state = generators.state();
+    const nonce = generators.nonce();
 
-  // Build authorization URL
-  const authUrl = new URL(oauthConfig.authorizationEndpoint);
-  authUrl.searchParams.append('client_id', oauthConfig.clientId);
-  authUrl.searchParams.append('redirect_uri', oauthConfig.redirectUri);
-  authUrl.searchParams.append('response_type', 'code');
-  authUrl.searchParams.append('scope', oauthConfig.scope);
-  authUrl.searchParams.append('state', state);
-  authUrl.searchParams.append('nonce', nonce);
-  authUrl.searchParams.append('code_challenge', codeChallenge);
-  authUrl.searchParams.append('code_challenge_method', 'S256');
+    // Store in session
+    req.session.codeVerifier = codeVerifier;
+    req.session.oauthState = state;
+    req.session.oauthNonce = nonce;
 
-  res.redirect(authUrl.toString());
+    // Build authorization URL
+    const authUrl = oidcClient.authorizationUrl({
+      scope: process.env.OAUTH_SCOPE,
+      state: state,
+      nonce: nonce,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256'
+    });
+
+    console.log('Redirecting to:', authUrl);
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error('Error initiating OAuth flow:', error);
+    res.render('error', {
+      appName: process.env.APP_NAME,
+      error: 'Authentication Error',
+      message: 'Failed to initiate authentication flow.'
+    });
+  }
 });
 
 // OAuth callback
 app.get('/auth-callback', async (req, res) => {
-  const { code, state, error, error_description } = req.query;
-
+  const params = oidcClient.callbackParams(req);
+  
   // Handle OAuth errors
-  if (error) {
-    console.error('OAuth error:', error, error_description);
+  if (params.error) {
+    console.error('OAuth error:', params.error, params.error_description);
     return res.render('error', {
       appName: process.env.APP_NAME,
       error: 'Authentication failed',
-      message: error_description || error
+      message: params.error_description || params.error
     });
   }
 
   // Verify state
-  if (state !== req.session.oauthState) {
+  if (params.state !== req.session.oauthState) {
     return res.render('error', {
       appName: process.env.APP_NAME,
       error: 'Invalid state',
@@ -177,43 +201,34 @@ app.get('/auth-callback', async (req, res) => {
   }
 
   try {
+    console.log('Exchanging code for tokens...');
+    
     // Exchange authorization code for tokens
-    const tokenResponse = await axios.post(
-      oauthConfig.tokenEndpoint,
-      new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: oauthConfig.redirectUri,
-        client_id: oauthConfig.clientId,
-        code_verifier: req.session.codeVerifier
-      }),
+    const tokenSet = await oidcClient.callback(
+      process.env.OAUTH_REDIRECT_URI,
+      params,
       {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        code_verifier: req.session.codeVerifier,
+        state: req.session.oauthState,
+        nonce: req.session.oauthNonce
       }
     );
 
-    const { access_token, id_token, refresh_token } = tokenResponse.data;
+    console.log('Token exchange successful');
 
     // Get user info
-    const userInfoResponse = await axios.get(oauthConfig.userInfoEndpoint, {
-      headers: {
-        'Authorization': `Bearer ${access_token}`
-      }
-    });
-
-    const userInfo = userInfoResponse.data;
+    const userInfo = await oidcClient.userinfo(tokenSet.access_token);
+    console.log('User info retrieved:', userInfo.email);
 
     // Store user info and tokens in session
     req.session.user = {
-      name: userInfo.name || userInfo.preferred_username || 'User',
+      name: userInfo.name || userInfo.preferred_username || userInfo.email || 'User',
       email: userInfo.email || '',
       sub: userInfo.sub
     };
-    req.session.accessToken = access_token;
-    req.session.idToken = id_token;
-    req.session.refreshToken = refresh_token;
+    req.session.accessToken = tokenSet.access_token;
+    req.session.idToken = tokenSet.id_token;
+    req.session.refreshToken = tokenSet.refresh_token;
 
     // Clean up OAuth session data
     delete req.session.oauthState;
@@ -222,11 +237,11 @@ app.get('/auth-callback', async (req, res) => {
 
     res.redirect('/dashboard');
   } catch (error) {
-    console.error('Token exchange error:', error.response?.data || error.message);
+    console.error('Token exchange error:', error);
     res.render('error', {
       appName: process.env.APP_NAME,
       error: 'Authentication failed',
-      message: 'Failed to exchange authorization code for tokens.'
+      message: error.message || 'Failed to exchange authorization code for tokens.'
     });
   }
 });
@@ -241,7 +256,7 @@ app.get('/dashboard', requireAuth, (req, res) => {
 });
 
 // Logout
-app.get('/logout', (req, res) => {
+app.get('/logout', async (req, res) => {
   const idToken = req.session.idToken;
   
   // Destroy session
@@ -250,16 +265,22 @@ app.get('/logout', (req, res) => {
       console.error('Session destruction error:', err);
     }
 
-    if (DEMO_MODE || !idToken) {
+    if (DEMO_MODE || !idToken || !oidcClient) {
       return res.redirect('/');
     }
 
-    // Redirect to OAuth provider's logout endpoint
-    const logoutUrl = new URL(oauthConfig.endSessionEndpoint);
-    logoutUrl.searchParams.append('id_token_hint', idToken);
-    logoutUrl.searchParams.append('post_logout_redirect_uri', oauthConfig.postLogoutRedirectUri);
+    try {
+      // Build logout URL
+      const logoutUrl = oidcClient.endSessionUrl({
+        id_token_hint: idToken,
+        post_logout_redirect_uri: process.env.OAUTH_POST_LOGOUT_REDIRECT_URI
+      });
 
-    res.redirect(logoutUrl.toString());
+      res.redirect(logoutUrl);
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.redirect('/');
+    }
   });
 });
 
@@ -311,12 +332,39 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`\n========================================`);
-  console.log(`${process.env.APP_NAME}`);
-  console.log(`========================================`);
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Demo Mode: ${DEMO_MODE ? 'ENABLED' : 'DISABLED'}`);
-  console.log(`========================================\n`);
-});
+// Start server with HTTPS or HTTP
+if (USE_HTTPS) {
+  const certPath = path.join(__dirname, 'localhost-cert.pem');
+  const keyPath = path.join(__dirname, 'localhost-key.pem');
+  
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    const httpsOptions = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath)
+    };
+    
+    https.createServer(httpsOptions, app).listen(PORT, () => {
+      console.log(`\n========================================`);
+      console.log(`${process.env.APP_NAME}`);
+      console.log(`========================================`);
+      console.log(`Server running on https://localhost:${PORT}`);
+      console.log(`Demo Mode: ${DEMO_MODE ? 'ENABLED' : 'DISABLED'}`);
+      console.log(`HTTPS: ENABLED`);
+      console.log(`========================================\n`);
+    });
+  } else {
+    console.error('HTTPS certificates not found. Please run:');
+    console.error('openssl req -x509 -newkey rsa:2048 -nodes -sha256 -subj \'/CN=localhost\' -keyout localhost-key.pem -out localhost-cert.pem -days 365');
+    process.exit(1);
+  }
+} else {
+  http.createServer(app).listen(PORT, () => {
+    console.log(`\n========================================`);
+    console.log(`${process.env.APP_NAME}`);
+    console.log(`========================================`);
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Demo Mode: ${DEMO_MODE ? 'ENABLED' : 'DISABLED'}`);
+    console.log(`HTTPS: DISABLED`);
+    console.log(`========================================\n`);
+  });
+}

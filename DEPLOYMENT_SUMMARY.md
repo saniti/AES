@@ -81,7 +81,8 @@ The application is configured via environment variables in the `.env` file:
 
 - **Authority**: `https://app-is-prod.azurewebsites.net`
 - **Client ID**: `equinedashboard_manus_ai`
-- **Redirect URI**: `http://localhost:3000/auth-callback`
+- **Redirect URI**: `https://localhost:3000/auth-callback` (HTTPS required)
+- **Post Logout URI**: `https://localhost:3000/`
 - **Scopes**: `openid profile email equineapi offline_access`
 
 ### API Settings
@@ -93,6 +94,7 @@ The application is configured via environment variables in the `.env` file:
 - **Port**: `3000`
 - **App Name**: `Alerte Equine Science`
 - **Demo Mode**: `false` (set to `true` for testing)
+- **HTTPS**: `true` (required for OAuth)
 
 ## Running on Your Local Machine
 
@@ -116,17 +118,25 @@ The application is configured via environment variables in the `.env` file:
    npm install
    ```
 
-3. **Configure environment** (already done):
+3. **Generate SSL certificates** (required for HTTPS):
+   ```bash
+   openssl req -x509 -newkey rsa:2048 -nodes -sha256 -subj '/CN=localhost' -keyout localhost-key.pem -out localhost-cert.pem -days 365
+   ```
+
+4. **Configure environment** (already done):
    - The `.env` file is already configured with your settings
+   - HTTPS is enabled by default (`USE_HTTPS=true`)
    - No changes needed unless you want to modify the configuration
 
-4. **Start the server**:
+5. **Start the server**:
    ```bash
    npm start
    ```
 
-5. **Access the application**:
-   - Open your browser to `http://localhost:3000`
+6. **Access the application**:
+   - Open your browser to `https://localhost:3000`
+   - Accept the self-signed certificate warning (this is normal for local development)
+   - Click "Advanced" → "Proceed to localhost" (or equivalent in your browser)
 
 ### Testing Without Azure OAuth
 
