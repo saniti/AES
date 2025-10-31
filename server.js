@@ -273,6 +273,16 @@ app.get('/sessions', requireAuth, (req, res) => {
   });
 });
 
+// Session detail page
+app.get('/session/:recordingId', requireAuth, (req, res) => {
+  res.render('session-detail', {
+    user: req.user,
+    appName: process.env.APP_NAME,
+    demoMode: DEMO_MODE,
+    recordingId: req.params.recordingId
+  });
+});
+
 // Update horse
 app.put('/api/user/horses/:horseId', requireAuth, async (req, res) => {
   const { horseId } = req.params;
@@ -441,6 +451,43 @@ app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res)
     console.error('Unassigned sessions API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch unassigned sessions',
+      message: error.response?.data || error.message
+    });
+  }
+});
+
+// Get session detail
+app.get('/api/user/session/:recordingId', requireAuth, async (req, res) => {
+  const { recordingId } = req.params;
+  
+  if (DEMO_MODE) {
+    return res.json({
+      id: recordingId,
+      horseId: '1',
+      horseName: 'Thunder',
+      startTime: '2025-10-29T10:00:00',
+      stopTime: '2025-10-29T11:00:00',
+      rider: 'John Smith',
+      track: 'Dirt',
+      trafficLight: 'Green',
+      duration: 3600
+    });
+  }
+
+  try {
+    const response = await axios.get(
+      `${apiConfig.baseUrl}/api/Recordings/sessionMeta/recording/${recordingId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${req.session.accessToken}`
+        }
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error('Session detail API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch session detail',
       message: error.response?.data || error.message
     });
   }

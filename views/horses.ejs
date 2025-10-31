@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Horses - <%= appName %></title>
+  <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="with-sidebar">
@@ -250,7 +251,7 @@
             <div class="detail-row">
               <span class="label">Last Session:</span>
               <span class="value">
-                ${horse.lastSession ? `<a href="/sessions?horseId=${horse.id}&horseName=${encodeURIComponent(horse.name)}" class="session-link">${formatDateTime(horse.lastSession)}</a>` : 'Never'}
+                ${horse.lastSession ? `<a href="/sessions?horseId=${horse.id}&horseName=${encodeURIComponent(horse.name)}&date=${horse.lastSession}" class="session-link">${formatDateTime(horse.lastSession)}</a>` : 'Never'}
               </span>
             </div>
             ${horse.rfid ? `

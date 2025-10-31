@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sessions - <%= appName %></title>
+  <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body class="with-sidebar">
@@ -53,6 +54,7 @@
     // Check for horse filter from URL
     const urlParams = new URLSearchParams(window.location.search);
     filterHorseId = urlParams.get('horseId');
+    const filterDate = urlParams.get('date');
     if (filterHorseId) {
       const horseName = urlParams.get('horseName');
       if (horseName) {
@@ -140,7 +142,8 @@
         const matchesSearch = !searchTerm || 
           (session.horseName && session.horseName.toLowerCase().includes(searchTerm));
         
-        const matchesHorseId = !filterHorseId || session.horseId === filterHorseId;
+        // Match by horseId if specified in URL, otherwise allow all
+        const matchesHorseId = !filterHorseId || String(session.horseId) === String(filterHorseId);
 
         return matchesSearch && matchesHorseId;
       });
@@ -163,8 +166,9 @@
 
       container.innerHTML = sessions.map(session => {
         const duration = calculateDuration(session.startTime, session.stopTime);
+        const isHighlighted = filterDate && new Date(session.startTime).getTime() === new Date(filterDate).getTime();
         return `
-          <div class="session-card" onclick="viewSession('${session.id}')">
+          <div class="session-card ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')">
             <div class="session-header">
               <div class="session-info">
                 <h3 class="session-horse">${escapeHtml(session.horseName || 'Unknown Horse')}</h3>
@@ -207,8 +211,7 @@
     }
 
     function viewSession(sessionId) {
-      // TODO: Navigate to session detail page
-      alert('View session: ' + sessionId);
+      window.location.href = `/session/${sessionId}`;
     }
 
     function calculateDuration(startTime, stopTime) {
