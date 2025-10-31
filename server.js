@@ -284,6 +284,31 @@ app.get('/logout', async (req, res) => {
   });
 });
 
+// Get user's stables
+app.get('/api/user/stables', requireAuth, async (req, res) => {
+  if (DEMO_MODE) {
+    return res.json([
+      { id: '1', name: 'Demo Stable 1', location: 'Sydney' },
+      { id: '2', name: 'Demo Stable 2', location: 'Melbourne' }
+    ]);
+  }
+
+  try {
+    const response = await axios.get(`${apiConfig.baseUrl}/api/Stables`, {
+      headers: {
+        'Authorization': `Bearer ${req.session.accessToken}`
+      }
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Stables API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch stables',
+      message: error.response?.data || error.message
+    });
+  }
+});
+
 // API proxy endpoint (for authenticated API calls)
 app.get('/api/*', requireAuth, async (req, res) => {
   if (DEMO_MODE) {

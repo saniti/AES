@@ -1,0 +1,95 @@
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="stable-selector">
+      <select id="stableSelect" class="stable-dropdown">
+        <option value="">Loading stables...</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="user-info">
+    <div class="user-avatar">
+      <%= user.name.charAt(0).toUpperCase() %>
+    </div>
+    <div class="user-details">
+      <div class="user-name"><%= user.name %></div>
+      <div class="user-email"><%= user.email %></div>
+      <% if (user.role) { %>
+        <div class="user-role"><%= user.role %></div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="nav-menu">
+    <a href="/dashboard" class="nav-item active">
+      <span class="nav-icon">📊</span>
+      <span class="nav-text">Dashboard</span>
+    </a>
+    <a href="#" class="nav-item">
+      <span class="nav-icon">🐴</span>
+      <span class="nav-text">Horses</span>
+    </a>
+    <a href="#" class="nav-item">
+      <span class="nav-icon">🏥</span>
+      <span class="nav-text">Injuries</span>
+    </a>
+    <a href="#" class="nav-item">
+      <span class="nav-icon">📄</span>
+      <span class="nav-text">Documents</span>
+    </a>
+    <a href="#" class="nav-item">
+      <span class="nav-icon">👥</span>
+      <span class="nav-text">Users</span>
+    </a>
+  </div>
+
+  <div class="sidebar-footer">
+    <a href="/logout" class="nav-item logout">
+      <span class="nav-icon">🚪</span>
+      <span class="nav-text">Logout</span>
+    </a>
+  </div>
+</nav>
+
+<script>
+// Load stables on page load
+document.addEventListener('DOMContentLoaded', async () => {
+  const stableSelect = document.getElementById('stableSelect');
+  
+  try {
+    const response = await fetch('/api/user/stables');
+    const stables = await response.json();
+    
+    stableSelect.innerHTML = '';
+    
+    if (stables.length === 0) {
+      stableSelect.innerHTML = '<option value="">No stables available</option>';
+    } else {
+      stables.forEach(stable => {
+        const option = document.createElement('option');
+        option.value = stable.id;
+        option.textContent = stable.name;
+        stableSelect.appendChild(option);
+      });
+      
+      // Load saved selection or select first
+      const savedStable = localStorage.getItem('selectedStable');
+      if (savedStable) {
+        stableSelect.value = savedStable;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load stables:', error);
+    stableSelect.innerHTML = '<option value="">Error loading stables</option>';
+  }
+  
+  // Save selection
+  stableSelect.addEventListener('change', () => {
+    localStorage.setItem('selectedStable', stableSelect.value);
+    // Trigger event for other components
+    window.dispatchEvent(new CustomEvent('stableChanged', { 
+      detail: { stableId: stableSelect.value } 
+    }));
+  });
+});
+</script>

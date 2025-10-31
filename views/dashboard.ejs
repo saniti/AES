@@ -6,35 +6,22 @@
   <title>Dashboard - <%= appName %></title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-  <div class="container">
-    <header>
-      <h1><%= appName %></h1>
-      <nav>
-        <a href="/" class="btn btn-secondary">Home</a>
-        <a href="/logout" class="btn btn-secondary">Logout</a>
-      </nav>
+<body class="with-sidebar">
+  <%- include('nav', { user: user }) %>
+
+  <main class="main-content">
+    <header class="top-header">
+      <h1><%= appName %> - Dashboard</h1>
     </header>
 
-    <main class="dashboard">
-      <div class="dashboard-header">
-        <h2>Dashboard</h2>
-        <div class="user-badge">
-          <span class="user-icon">👤</span>
-          <div class="user-details">
-            <strong><%= user.name %></strong>
-            <small><%= user.email %></small>
-          </div>
-        </div>
-      </div>
-
+    <div class="content-wrapper">
       <% if (demoMode) { %>
         <div class="alert alert-info">
           <strong>Demo Mode:</strong> You are viewing the dashboard in demo mode. API calls will return mock data.
         </div>
       <% } %>
 
-      <div class="dashboard-content">
+      <div class="dashboard-grid">
         <section class="auth-info">
           <h3>Authentication Status</h3>
           <div class="info-card">
@@ -61,7 +48,6 @@
           <h3>API Integration</h3>
           <div class="info-card">
             <p>The application is configured to use the Alerte Equine API for data operations.</p>
-            <p><strong>Base URL:</strong> <code>https://alerteequinedashboard.azurewebsites.net</code></p>
             
             <div class="api-test">
               <h4>Test API Connection</h4>
@@ -70,27 +56,9 @@
             </div>
           </div>
         </section>
-
-        <section class="next-steps">
-          <h3>Next Steps</h3>
-          <div class="info-card">
-            <p>This version focuses on authentication. Future versions will include:</p>
-            <ul>
-              <li>Horse management and tracking</li>
-              <li>Injury recording and monitoring</li>
-              <li>Document management</li>
-              <li>User administration</li>
-              <li>Data visualization and reporting</li>
-            </ul>
-          </div>
-        </section>
       </div>
-    </main>
-
-    <footer>
-      <p>&copy; 2025 <%= appName %>. All rights reserved.</p>
-    </footer>
-  </div>
+    </div>
+  </main>
 
   <script>
     document.getElementById('testApiBtn').addEventListener('click', async () => {
