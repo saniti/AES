@@ -244,7 +244,7 @@
             </div>
             <div class="detail-row">
               <span class="label">DOB:</span>
-              <span class="value">${formatDate(horse.dateOfBirth)}</span>
+              <span class="value">${formatDateLocal(horse.dateOfBirth)}</span>
             </div>
             <div class="detail-row">
               <span class="label">Last Session:</span>
@@ -350,8 +350,12 @@
       }
     }
 
-    function formatDate(dateStr) {
-      return window.formatDate ? window.formatDate(dateStr) : 'N/A';
+    function formatDateLocal(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleDateString(localeCode, { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
     function formatDateTime(dateStr) {
@@ -372,7 +376,20 @@
       if (diffDays === 1) return t.yesterday;
       if (diffDays < 7) return `${diffDays} ${t.daysAgo}`;
       
-      return window.formatDate ? window.formatDate(dateStr) : date.toLocaleDateString();
+      return formatDateLocal(dateStr);
+    }
+
+    function formatDateTimeLocal(dateStr) {
+      if (!dateStr) return 'N/A';
+      const locale = getCurrentLocale();
+      const date = new Date(dateStr);
+      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
+      return date.toLocaleDateString(localeCode, { 
+        weekday: 'short',
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
     }
 
     async function loadUnassignedSessions(stableId) {
@@ -390,7 +407,10 @@
         const response = await fetch(`/api/user/sessions/unassigned/${stableId}`);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch unassigned sessions');
+          // If 404 or other error, just show empty
+          loadingEl.style.display = 'none';
+          emptyEl.style.display = 'block';
+          return;
         }
 
         const sessions = await response.json();
@@ -419,7 +439,7 @@
           <div class="unassigned-session-card">
             <div class="session-info-section">
               <div class="session-time">
-                <strong>${formatDateTime(session.startTime)}</strong>
+                <strong>${formatDateTimeLocal(session.startTime)}</strong>
                 <span class="duration">${duration}</span>
               </div>
               ${session.rider ? `<div class="session-rider">Rider: ${escapeHtml(session.rider)}</div>` : ''}
