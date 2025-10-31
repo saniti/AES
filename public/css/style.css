@@ -579,9 +579,9 @@ footer {
 }
 
 .horse-details-horizontal {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: 90px 70px 60px 80px 160px 80px 100px;
+  gap: 16px;
   flex: 1;
   align-items: center;
 }
@@ -1575,6 +1575,12 @@ footer {
 }
 
 /* Mobile responsive for horizontal horse cards */
+@media (max-width: 1200px) {
+  .horse-details-horizontal {
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .horse-card-horizontal {
     flex-direction: column;
@@ -1588,11 +1594,12 @@ footer {
 
   .horse-details-horizontal {
     width: 100%;
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
 
   .detail-item {
-    min-width: 70px;
+    min-width: auto;
   }
 
   .horse-actions-horizontal {

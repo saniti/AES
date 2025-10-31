@@ -462,18 +462,21 @@
         const response = await fetch(`/api/user/sessions/unassigned/${stableId}`);
         
         if (!response.ok) {
-          // If 404 or other error, just show empty
+          console.error('Unassigned sessions response not ok:', response.status, response.statusText);
           loadingEl.style.display = 'none';
           emptyEl.style.display = 'block';
+          emptyEl.textContent = 'Unable to load unassigned sessions';
           return;
         }
 
         const sessions = await response.json();
+        console.log('Unassigned sessions received:', sessions);
         
         loadingEl.style.display = 'none';
 
-        if (sessions.length === 0) {
+        if (!Array.isArray(sessions) || sessions.length === 0) {
           emptyEl.style.display = 'block';
+          emptyEl.textContent = 'No unassigned sessions';
         } else {
           displayUnassignedSessions(sessions);
         }

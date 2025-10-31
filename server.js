@@ -455,7 +455,10 @@ app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res)
         }
       }
     );
-    res.json(response.data);
+    const sessions = response.data;
+    const sessionsArray = Array.isArray(sessions) ? sessions : [];
+    console.log(`Unassigned sessions for stable ${stableId}:`, sessionsArray.length);
+    res.json(sessionsArray);
   } catch (error) {
     console.error('Unassigned sessions API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
@@ -583,15 +586,58 @@ app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
   }
 
   try {
-    const response = await axios.get(
-      `${apiConfig.baseUrl}/api/Horses/session/stableId/${stableId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${req.session.accessToken}`
+    const [horsesResponse, sessionsResponse] = await Promise.all([
+      axios.get(
+        `${apiConfig.baseUrl}/api/Horses/session/stableId/${stableId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${req.session.accessToken}`
+          }
         }
+      ),
+      axios.get(
+        `${apiConfig.baseUrl}/api/Recordings/sessionMeta/stable/${stableId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${req.session.accessToken}`
+          }
+        }
+      )
+    ]);
+
+    const horses = horsesResponse.data;
+    const sessions = sessionsResponse.data;
+
+    // Create session lookup map by horseId
+    const sessionMap = {};
+    if (Array.isArray(sessions)) {
+      sessions.forEach(session => {
+        if (session.horseId) {
+          if (!sessionMap[session.horseId] || new Date(session.startTime) > new Date(sessionMap[session.horseId].startTime)) {
+            sessionMap[session.horseId] = session;
+          }
+        }
+      });
+    }
+
+    // Add duration to horses
+    const enrichedHorses = Array.isArray(horses) ? horses.map(horse => {
+      const lastSession = sessionMap[horse.id];
+      let duration = null;
+      if (lastSession && lastSession.startTime && lastSession.stopTime) {
+        const durationMs = new Date(lastSession.stopTime) - new Date(lastSession.startTime);
+        const minutes = Math.floor(durationMs / 60000);
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
       }
-    );
-    res.json(response.data);
+      return {
+        ...horse,
+        lastSessionDuration: duration
+      };
+    }) : [];
+
+    res.json(enrichedHorses);
   } catch (error) {
     console.error('Horses API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
