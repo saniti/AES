@@ -593,6 +593,15 @@ footer {
   min-width: 80px;
 }
 
+/* Uniform column widths for better alignment */
+.detail-brand { min-width: 90px; max-width: 90px; }
+.detail-gender { min-width: 70px; max-width: 70px; }
+.detail-age { min-width: 60px; max-width: 60px; }
+.detail-status { min-width: 80px; max-width: 80px; }
+.detail-session { min-width: 160px; max-width: 160px; }
+.detail-duration { min-width: 80px; max-width: 80px; }
+.detail-rfid { min-width: 100px; max-width: 100px; }
+
 .detail-label {
   font-size: 11px;
   color: var(--text-secondary);
@@ -678,12 +687,12 @@ footer {
   opacity: 0.9;
   font-style: italic;
 }.traffic-indicator {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   white-space: nowrap;
 }
 

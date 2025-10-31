@@ -400,14 +400,18 @@ app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
     const recordings = recordingsResponse.data;
     const horses = horsesResponse.data;
 
+    // Ensure we have arrays
+    const recordingsArray = Array.isArray(recordings) ? recordings : [];
+    const horsesArray = Array.isArray(horses) ? horses : [];
+
     // Create horse lookup map
     const horseMap = {};
-    horses.forEach(horse => {
+    horsesArray.forEach(horse => {
       horseMap[horse.id] = horse.name;
     });
 
     // Add horse names to recordings
-    const enrichedRecordings = recordings.map(recording => ({
+    const enrichedRecordings = recordingsArray.map(recording => ({
       ...recording,
       horseName: recording.horseId ? horseMap[recording.horseId] : null
     }));
@@ -488,7 +492,28 @@ app.get('/api/user/session/:recordingId', requireAuth, async (req, res) => {
         }
       }
     );
-    res.json(response.data);
+    
+    const session = response.data;
+    
+    // If session has horseId but no horseName, fetch it
+    if (session.horseId && !session.horseName) {
+      try {
+        const horseResponse = await axios.get(
+          `${apiConfig.baseUrl}/api/Horses/${session.horseId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${req.session.accessToken}`
+            }
+          }
+        );
+        session.horseName = horseResponse.data.name;
+      } catch (horseError) {
+        console.error('Failed to fetch horse name:', horseError.message);
+        session.horseName = 'Unknown';
+      }
+    }
+    
+    res.json(session);
   } catch (error) {
     console.error('Session detail API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
@@ -654,6 +679,28 @@ app.get('/api/user/dashboard/:stableId', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Dashboard API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
+// Get status dropdown values
+app.get('/api/user/dropdowns/status', requireAuth, async (req, res) => {
+  if (DEMO_MODE) {
+    return res.json(['Active', 'Inactive', 'Retired', 'Training']);
+  }
+
+  try {
+    const response = await axios.get(`${apiConfig.baseUrl}/api/Dropdowns/status`, {
+      headers: {
+        'Authorization': `Bearer ${req.session.accessToken}`
+      }
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('Status dropdown API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch status values',
+      message: error.response?.data || error.message
+    });
   }
 });
 
