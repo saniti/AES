@@ -123,7 +123,7 @@
 
       // Injury risk badge
       const trafficBadge = document.getElementById('trafficBadge');
-      const injuryLevel = session.trafficLight || session.injuryLevel || 'Green';
+      const injuryLevel = String(session.trafficLight || session.injuryLevel || 'Green');
       const riskLabel = injuryLevel === 'Green' ? 'Low Risk' : injuryLevel === 'Yellow' ? 'Medium Risk' : injuryLevel === 'Red' ? 'High Risk' : 'Low Risk';
       trafficBadge.textContent = riskLabel;
       trafficBadge.className = `traffic-indicator traffic-${injuryLevel.toLowerCase()}`;

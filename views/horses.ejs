@@ -224,8 +224,8 @@
               </h3>
               ${horse.alias ? `<span class="horse-alias">"${escapeHtml(horse.alias)}"</span>` : ''}
             </div>
-            <div class="traffic-indicator traffic-${(horse.traffic || 'Green').toLowerCase()}">
-              ${horse.traffic === 'Green' ? 'Low Risk' : horse.traffic === 'Yellow' ? 'Medium Risk' : horse.traffic === 'Red' ? 'High Risk' : horse.traffic || 'Low Risk'}
+            <div class="traffic-indicator traffic-${String(horse.traffic || 'Green').toLowerCase()}">
+              ${String(horse.traffic || 'Green') === 'Green' ? 'Low Risk' : String(horse.traffic || 'Yellow') === 'Yellow' ? 'Medium Risk' : String(horse.traffic || 'Red') === 'Red' ? 'High Risk' : 'Low Risk'}
             </div>
           </div>
 

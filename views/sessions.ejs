@@ -176,8 +176,8 @@
                 <h3 class="session-horse">${escapeHtml(session.horseName || 'Unknown Horse')}</h3>
                 <span class="session-date">${formatDateTime(session.startTime)}</span>
               </div>
-              <div class="traffic-indicator traffic-${(session.trafficLight || session.injuryLevel || 'Green').toLowerCase()}">
-                ${(session.trafficLight || session.injuryLevel) === 'Green' ? 'Low Risk' : (session.trafficLight || session.injuryLevel) === 'Yellow' ? 'Medium Risk' : (session.trafficLight || session.injuryLevel) === 'Red' ? 'High Risk' : 'Low Risk'}
+              <div class="traffic-indicator traffic-${String(session.trafficLight || session.injuryLevel || 'Green').toLowerCase()}">
+                ${String(session.trafficLight || session.injuryLevel || 'Green') === 'Green' ? 'Low Risk' : String(session.trafficLight || session.injuryLevel || 'Yellow') === 'Yellow' ? 'Medium Risk' : String(session.trafficLight || session.injuryLevel || 'Red') === 'Red' ? 'High Risk' : 'Low Risk'}
               </div>
             </div>
 
