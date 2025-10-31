@@ -264,6 +264,44 @@ app.get('/horses', requireAuth, (req, res) => {
   });
 });
 
+// Sessions page
+app.get('/sessions', requireAuth, (req, res) => {
+  res.render('sessions', {
+    user: req.user,
+    appName: process.env.APP_NAME,
+    demoMode: DEMO_MODE
+  });
+});
+
+// Update horse
+app.put('/api/user/horses/:horseId', requireAuth, async (req, res) => {
+  const { horseId } = req.params;
+  
+  if (DEMO_MODE) {
+    return res.json({ success: true, message: 'Demo mode - horse not actually updated' });
+  }
+
+  try {
+    const response = await axios.put(
+      `${apiConfig.baseUrl}/api/Horses`,
+      { id: horseId, ...req.body },
+      {
+        headers: {
+          'Authorization': `Bearer ${req.session.accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error('Update horse error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to update horse',
+      message: error.response?.data || error.message
+    });
+  }
+});
+
 // Logout
 app.get('/logout', async (req, res) => {
   const idToken = req.session.idToken;
@@ -291,6 +329,55 @@ app.get('/logout', async (req, res) => {
       res.redirect('/');
     }
   });
+});
+
+// Get sessions/recordings by stable with days filter
+app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
+  const { stableId, days } = req.params;
+  
+  if (DEMO_MODE) {
+    const now = new Date();
+    return res.json([
+      {
+        id: 'rec1',
+        horseId: '1',
+        horseName: 'Thunder',
+        startTime: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        stopTime: new Date(now - 2 * 24 * 60 * 60 * 1000 + 3600000).toISOString(),
+        rider: 'John Smith',
+        track: 'Dirt',
+        trafficLight: 'Green'
+      },
+      {
+        id: 'rec2',
+        horseId: '2',
+        horseName: 'Lightning',
+        startTime: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        stopTime: new Date(now - 5 * 24 * 60 * 60 * 1000 + 4500000).toISOString(),
+        rider: 'Jane Doe',
+        track: 'Turf',
+        trafficLight: 'Yellow'
+      }
+    ]);
+  }
+
+  try {
+    const response = await axios.get(
+      `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}/${days}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${req.session.accessToken}`
+        }
+      }
+    );
+    res.json(response.data);
+  } catch (error) {
+    console.error('Sessions API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch sessions',
+      message: error.response?.data || error.message
+    });
+  }
 });
 
 // Get horses by stable

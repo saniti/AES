@@ -60,6 +60,48 @@
     </div>
   </main>
 
+  <!-- Edit Horse Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Horse</h2>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editHorseId" />
+        
+        <div class="form-group">
+          <label for="editHorseName">Name *</label>
+          <input type="text" id="editHorseName" required />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseAlias">Alias</label>
+          <input type="text" id="editHorseAlias" />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseBrand">Brand</label>
+          <input type="text" id="editHorseBrand" />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseRfid">RFID</label>
+          <input type="text" id="editHorseRfid" />
+        </div>
+        
+        <div class="form-group">
+          <label for="editHorseDob">Date of Birth</label>
+          <input type="date" id="editHorseDob" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveHorse()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let allHorses = [];
     let currentStableId = null;
@@ -169,7 +211,11 @@
         <div class="horse-card">
           <div class="horse-header">
             <div class="horse-name-section">
-              <h3 class="horse-name">${escapeHtml(horse.name || 'Unnamed')}</h3>
+              <h3 class="horse-name">
+                <a href="/sessions?horseId=${horse.id}&horseName=${encodeURIComponent(horse.name || 'Unnamed')}" class="horse-name-link">
+                  ${escapeHtml(horse.name || 'Unnamed')}
+                </a>
+              </h3>
               ${horse.alias ? `<span class="horse-alias">"${escapeHtml(horse.alias)}"</span>` : ''}
             </div>
             <div class="traffic-indicator traffic-${(horse.traffic || 'Green').toLowerCase()}">
@@ -196,7 +242,9 @@
             </div>
             <div class="detail-row">
               <span class="label">Last Session:</span>
-              <span class="value">${formatDateTime(horse.lastSession)}</span>
+              <span class="value">
+                ${horse.lastSession ? `<a href="/sessions?horseId=${horse.id}&horseName=${encodeURIComponent(horse.name)}" class="session-link">${formatDateTime(horse.lastSession)}</a>` : 'Never'}
+              </span>
             </div>
             ${horse.rfid ? `
             <div class="detail-row">
@@ -207,15 +255,67 @@
           </div>
 
           <div class="horse-actions">
-            <button class="btn btn-sm btn-primary" onclick="viewHorse('${horse.id}')">View Details</button>
+            <button class="btn btn-sm btn-primary" onclick="editHorse('${horse.id}')">Edit</button>
+            <button class="btn btn-sm btn-secondary" onclick="viewSessions('${horse.id}', '${escapeHtml(horse.name)}')">View Sessions</button>
           </div>
         </div>
       `).join('');
     }
 
-    function viewHorse(horseId) {
-      // TODO: Navigate to horse detail page
-      alert('View horse: ' + horseId);
+    function editHorse(horseId) {
+      const horse = allHorses.find(h => h.id === horseId);
+      if (!horse) return;
+
+      // Populate modal
+      document.getElementById('editHorseId').value = horse.id;
+      document.getElementById('editHorseName').value = horse.name || '';
+      document.getElementById('editHorseAlias').value = horse.alias || '';
+      document.getElementById('editHorseBrand').value = horse.brand || '';
+      document.getElementById('editHorseRfid').value = horse.rfid || '';
+      document.getElementById('editHorseDob').value = horse.dateOfBirth ? horse.dateOfBirth.split('T')[0] : '';
+      
+      // Show modal
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function viewSessions(horseId, horseName) {
+      window.location.href = `/sessions?horseId=${horseId}&horseName=${encodeURIComponent(horseName)}`;
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    async function saveHorse() {
+      const horseId = document.getElementById('editHorseId').value;
+      const data = {
+        name: document.getElementById('editHorseName').value,
+        alias: document.getElementById('editHorseAlias').value,
+        brand: document.getElementById('editHorseBrand').value,
+        rfid: document.getElementById('editHorseRfid').value,
+        dateOfBirth: document.getElementById('editHorseDob').value
+      };
+
+      try {
+        const response = await fetch(`/api/user/horses/${horseId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update horse');
+        }
+
+        alert('Horse updated successfully');
+        closeEditModal();
+        loadHorses(currentStableId);
+      } catch (error) {
+        console.error('Error updating horse:', error);
+        alert('Error updating horse: ' + error.message);
+      }
     }
 
     function formatDate(dateStr) {
