@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sessions - Alerte Equine Science</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/themes.css">
 </head>
@@ -105,6 +106,13 @@
     }
 
     async function loadSessions(days) {
+      console.log('loadSessions called with days:', days, 'stableId:', currentStableId);
+      
+      if (!currentStableId) {
+        console.error('No stable selected');
+        return;
+      }
+      
       const loadingEl = document.getElementById('loadingMessage');
       const errorEl = document.getElementById('errorMessage');
       const emptyEl = document.getElementById('emptyMessage');
@@ -116,14 +124,18 @@
       container.innerHTML = '';
 
       try {
-        const response = await fetch(`/api/user/sessions/${currentStableId}/${days}`);
+        const url = `/api/user/sessions/${currentStableId}/${days}`;
+        console.log('Fetching from:', url);
+        const response = await fetch(url);
         
         if (!response.ok) {
-          throw new Error('Failed to load sessions');
+          console.error('Response not OK:', response.status, response.statusText);
+          throw new Error(`Failed to load sessions: ${response.status}`);
         }
 
         allSessions = await response.json();
-        console.log('Loaded sessions:', allSessions.length);
+        console.log('Loaded sessions:', allSessions.length, 'sessions');
+        console.log('First session:', allSessions[0]);
         
         loadingEl.style.display = 'none';
         filterSessions();
@@ -165,46 +177,45 @@
 
       emptyEl.style.display = 'none';
 
-      // Create table structure like horses page
+      // Create individual session cards like horses page
       const injuryRiskLabel = (risk) => {
         const r = String(risk).toLowerCase();
         return r === 'green' ? 'Low Risk' : r === 'yellow' ? 'Medium Risk' : r === 'red' ? 'High Risk' : 'Low Risk';
       };
 
-      container.innerHTML = `
-        <table class="horse-details-table">
-          <thead>
-            <tr>
-              <th>Horse</th>
-              <th>Risk</th>
-              <th>Session Date/Time</th>
-              <th>Duration</th>
-              <th>Rider</th>
-              <th>Track</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sessions.map(session => {
-              const duration = calculateDuration(session.startTime, session.stopTime);
-              const isHighlighted = filterDate && new Date(session.startTime).getTime() === new Date(filterDate).getTime();
-              const injuryRisk = String(session.trafficLight || session.injuryLevel || 'Green').toLowerCase();
-              const horseName = session.horseName || 'Unknown Horse';
-              const alias = session.horseAlias ? ` (${session.horseAlias})` : '';
-              
-              return `
-                <tr class="${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')" style="cursor: pointer;">
-                  <td><strong>${escapeHtml(horseName)}</strong>${alias}</td>
-                  <td><span class="traffic-indicator traffic-${injuryRisk}">${injuryRiskLabel(injuryRisk)}</span></td>
-                  <td>${formatDateTime(session.startTime)}</td>
-                  <td>${duration}</td>
-                  <td>${escapeHtml(session.rider || 'N/A')}</td>
-                  <td>${escapeHtml(session.track || 'N/A')}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      `;
+      container.innerHTML = sessions.map(session => {
+        const duration = calculateDuration(session.startTime, session.stopTime);
+        const isHighlighted = filterDate && new Date(session.startTime).getTime() === new Date(filterDate).getTime();
+        const injuryRisk = String(session.trafficLight || session.injuryLevel || 'Green').toLowerCase();
+        const horseName = session.horseName || 'Unknown Horse';
+        const alias = session.horseAlias ? ` (${session.horseAlias})` : '';
+        
+        return `
+          <div class="horse-card ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')" style="cursor: pointer;">
+            <div class="horse-header">
+              <div>
+                <h3 class="horse-name">${escapeHtml(horseName)}</h3>
+                ${alias ? `<span class="horse-alias">${escapeHtml(alias)}</span>` : ''}
+              </div>
+              <span class="traffic-indicator traffic-${injuryRisk}">${injuryRiskLabel(injuryRisk)}</span>
+            </div>
+            <table class="horse-details-table">
+              <tr>
+                <th>Session Date/Time</th>
+                <th>Duration</th>
+                <th>Rider</th>
+                <th>Track</th>
+              </tr>
+              <tr>
+                <td>${formatDateTime(session.startTime)}</td>
+                <td>${duration}</td>
+                <td>${escapeHtml(session.rider || 'N/A')}</td>
+                <td>${escapeHtml(session.track || 'N/A')}</td>
+              </tr>
+            </table>
+          </div>
+        `;
+      }).join('');
     }
 
     function viewSession(sessionId) {
@@ -213,11 +224,14 @@
 
     // Event listeners
     document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        currentDays = this.dataset.days;
-        loadSessions(currentDays);
+        btn.classList.add('active');
+        const days = btn.dataset.days;
+        currentDays = days;
+        console.log('Filter button clicked:', days);
+        // Pass the string 'all' directly, don't convert to number
+        loadSessions(days);
       });
     });
 
