@@ -174,7 +174,9 @@
         }
 
         performanceData = await response.json();
-        console.log('Performance data:', performanceData);
+        console.log("Performance data:", performanceData);
+        console.log("Session Storage Horse Name:", sessionStorage.getItem("currentHorseName"));
+        console.log("Session Info Horse Name:", performanceData.sessionInfo?.horseName);
         
         loadingEl.style.display = 'none';
         contentEl.style.display = 'block';
