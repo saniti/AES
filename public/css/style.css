@@ -119,9 +119,17 @@ body.sidebar-collapsed .hamburger-menu {
 .sidebar.collapsed .user-role,
 .sidebar.collapsed .stable-selector,
 .sidebar.collapsed .theme-selector label,
-.sidebar.collapsed .theme-dropdown,
-.sidebar.collapsed .logo-container img {
+.sidebar.collapsed .theme-dropdown {
   display: none;
+}
+
+.sidebar.collapsed .logo-container {
+  padding: 10px 5px;
+}
+
+.sidebar.collapsed .logo-container img {
+  max-width: 40px;
+  height: auto;
 }
 
 .sidebar.collapsed .user-avatar {
@@ -805,29 +813,35 @@ footer {
   font-size: 13px;
   opacity: 0.9;
   font-style: italic;
-}.traffic-indicator {
-  padding: 3px 8px;
-  border-radius: 10px;
+}
+
+.traffic-indicator {
+  padding: 4px 10px;
+  border-radius: 12px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
+  display: inline-block;
 }
 
-.traffic-green {
-  background-color: #10b981;
-  color: white;
+.traffic-green,
+.traffic-indicator.traffic-green {
+  background-color: #10b981 !important;
+  color: white !important;
 }
 
-.traffic-yellow {
-  background-color: #f59e0b;
-  color: white;
+.traffic-yellow,
+.traffic-indicator.traffic-yellow {
+  background-color: #f59e0b !important;
+  color: white !important;
 }
 
-.traffic-red {
-  background-color: #ef4444;
-  color: white;
+.traffic-red,
+.traffic-indicator.traffic-red {
+  background-color: #ef4444 !important;
+  color: white !important;
 }
 
 .horse-details {
@@ -1607,6 +1621,15 @@ footer {
 .session-item-horse {
   font-size: 16px;
   color: var(--text-primary);
+}
+
+.session-item .traffic-indicator {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .session-item-details {
