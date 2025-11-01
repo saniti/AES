@@ -526,34 +526,6 @@ app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res)
     res.status(error.response?.status || 500).json({ error: 'Failed to fetch unassigned sessions' });
   }
 });
-    ]);
-  }
-
-  try {
-    const response = await axios.get(
-      `${apiConfig.baseUrl}/api/Recordings/unassigned/session/stable/${stableId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${req.session.accessToken}`
-        }
-      }
-    );
-    const sessions = response.data;
-    // Ensure the response is an array and map to include 'recordingId' as 'id' for consistency if needed
-    const sessionsArray = Array.isArray(sessions) ? sessions.map(s => ({
-      ...s,
-      id: s.recordingId || s.id // Ensure 'id' is present for frontend logic
-    })) : [];
-    console.log(`Unassigned sessions for stable ${stableId}:`, sessionsArray.length);
-    res.json(sessionsArray);
-  } catch (error) {
-    console.error('Unassigned sessions API error:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json({
-      error: 'Failed to fetch unassigned sessions',
-      message: error.response?.data || error.message
-    });
-  }
-});
 
 // Get performance metrics (pdfStats)
 app.get('/api/user/performance/:recordingId', requireAuth, async (req, res) => {
