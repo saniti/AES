@@ -487,9 +487,6 @@
 
     async function loadUnassignedSessions(stableId) {
       if (!stableId) return;
-
-      const section    async function loadUnassignedSessions(stableId) {
-      if (!stableId) return;
       
       const loadingEl = document.getElementById('unassignedLoading');
       const emptyEl = document.getElementById('unassignedEmpty');
@@ -503,7 +500,7 @@
       console.log('DEBUG: API Endpoint: /api/user/sessions/unassigned/' + stableId);
 
       try {
-        const response = await fetch(`/api/user/sessions/unassigned/${stableId}`);       
+        const response = await fetch(`/api/user/sessions/unassigned/${stableId}`);
         if (!response.ok) {
           const errorText = await response.text();
           console.error('Unassigned sessions response not ok:', response.status, response.statusText, errorText);
