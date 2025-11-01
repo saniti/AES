@@ -156,7 +156,7 @@
     </main>
   </div>
 
-  <script src="/js/locale.js"></script>
+  
   <script>
     const recordingId = '<%= recordingId %>';
     let performanceData = null;
@@ -174,9 +174,7 @@
         }
 
         performanceData = await response.json();
-        console.log("Performance data:", performanceData);
-        console.log("Session Storage Horse Name:", sessionStorage.getItem("currentHorseName"));
-        console.log("Session Info Horse Name:", performanceData.sessionInfo?.horseName);
+
         
         loadingEl.style.display = 'none';
         contentEl.style.display = 'block';
@@ -199,9 +197,12 @@
       // Display session info
       if (data.sessionInfo) {
         // Try to get horse name from sessionInfo, then sessionStorage, then default
-        const horseName = data.sessionInfo.horseName || 
-                         sessionStorage.getItem('currentHorseName') || 
-                         'Unknown Horse';
+        const sessionHorseName = data.sessionInfo.horseName;
+        const storageHorseName = sessionStorage.getItem('currentHorseName');
+        
+        const horseName = (sessionHorseName && sessionHorseName !== 'Unknown Horse') 
+                          ? sessionHorseName 
+                          : storageHorseName || 'Unknown Horse';
         document.getElementById('horseName').textContent = horseName;
         document.getElementById('sessionDate').textContent = new Date(data.sessionInfo.startTime).toLocaleString();
         
