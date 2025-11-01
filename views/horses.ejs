@@ -575,7 +575,7 @@
             </table>
             
             <div class="horse-actions-horizontal">
-              <button class="btn btn-primary" onclick="openAssignModal('${session.id}')" title="Assign Horse">
+              <button class="btn btn-primary" onclick="openAssignModal('${session.recordingId}')" title="Assign Horse">
                 <i class="fas fa-link"></i> Assign Horse
               </button>
             </div>
@@ -584,8 +584,8 @@
       }).join('');
     }
 
-    function openAssignModal(sessionId) {
-      currentAssignSessionId = sessionId;
+    function openAssignModal(recordingId) {
+      currentAssignSessionId = recordingId;
       const modal = document.getElementById('assignModal');
       const horseList = document.getElementById('assignHorseList');
       
