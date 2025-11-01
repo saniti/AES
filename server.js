@@ -699,7 +699,7 @@ app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
         }
       ),
       axios.get(
-        `${apiConfig.baseUrl}/api/Recordings/sessionMeta/stable/${stableId}`,
+        `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}`,
         {
           headers: {
             'Authorization': `Bearer ${req.session.accessToken}`
