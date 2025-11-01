@@ -82,6 +82,10 @@
             <!-- Charts Section -->
             <div class="charts-section">
             <div class="chart-container">
+              <h3>Velocity vs Stride Length vs Stride Frequency</h3>
+              <canvas id="velocityStrideChart"></canvas>
+            </div>
+            <div class="chart-container">
               <h3>Speed vs Heart Rate</h3>
               <canvas id="speedHeartRateChart"></canvas>
             </div>
@@ -185,7 +189,11 @@
     function displayPerformanceData(data) {
       // Display session info
       if (data.sessionInfo) {
-        document.getElementById('horseName').textContent = data.sessionInfo.horseName || 'Unknown Horse';
+        // Try to get horse name from sessionInfo, then sessionStorage, then default
+        const horseName = data.sessionInfo.horseName || 
+                         sessionStorage.getItem('currentHorseName') || 
+                         'Unknown Horse';
+        document.getElementById('horseName').textContent = horseName;
         document.getElementById('sessionDate').textContent = new Date(data.sessionInfo.startTime).toLocaleString();
         
         if (data.sessionInfo.startTime && data.sessionInfo.stopTime) {
@@ -206,6 +214,9 @@
       document.getElementById('preWorkTime').textContent = data.preWorkTime ? data.preWorkTime.toFixed(1) : '--';
       document.getElementById('preWorkDistance').textContent = data.preWorkoutDistance?.distance || '--';
 
+      // Create velocity/stride chart first
+      createVelocityStrideChart(data);
+
       // Create charts
       if (data.speedHeartRate?.speedHeartRateChart) {
         createCharts(data.speedHeartRate.speedHeartRateChart);
@@ -214,6 +225,130 @@
 
       // Generate analysis
       generateAnalysis(data);
+    }
+
+    function createVelocityStrideChart(data) {
+      // Check if intervals data has stride information
+      if (!performanceData.intervals || !performanceData.intervals.truncatedStats) {
+        console.log('No stride data available');
+        return;
+      }
+
+      const stats = performanceData.intervals.truncatedStats;
+      const velocities = [];
+      const strideLengths = [];
+      const strideFrequencies = [];
+      const labels = [];
+
+      if (Array.isArray(stats)) {
+        stats.forEach((stat, index) => {
+          if (stat.stride && stat.speed) {
+            labels.push(`Point ${index + 1}`);
+            velocities.push(stat.speed.avg || 0);
+            strideLengths.push(stat.stride.length || 0);
+            strideFrequencies.push(stat.stride.frequency || 0);
+          }
+        });
+      }
+
+      if (velocities.length === 0) {
+        console.log('No valid stride data points');
+        return;
+      }
+
+      const ctx = document.getElementById('velocityStrideChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Velocity (m/s)',
+              data: velocities,
+              borderColor: 'rgb(59, 130, 246)',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              yAxisID: 'y',
+              tension: 0.4
+            },
+            {
+              label: 'Stride Length (m)',
+              data: strideLengths,
+              borderColor: 'rgb(16, 185, 129)',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              yAxisID: 'y1',
+              tension: 0.4
+            },
+            {
+              label: 'Stride Frequency (Hz)',
+              data: strideFrequencies,
+              borderColor: 'rgb(245, 158, 11)',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              yAxisID: 'y2',
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: 'Velocity, Stride Length, and Stride Frequency Analysis'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  label += context.parsed.y.toFixed(2);
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Velocity (m/s)'
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Stride Length (m)'
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            },
+            y2: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Stride Frequency (Hz)'
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            }
+          }
+        }
+      });
     }
 
     function createCharts(chartData) {

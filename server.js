@@ -528,8 +528,11 @@ app.get('/api/user/performance/:recordingId', requireAuth, async (req, res) => {
       const session = sessionResponse.data;
 
       // If session has horseId but no horseName, fetch it
+      console.log('Session data:', { horseId: session.horseId, horseName: session.horseName });
+      
       if (session.horseId && !session.horseName) {
         try {
+          console.log(`Fetching horse name for horseId: ${session.horseId}`);
           const horseResponse = await axios.get(
             `${apiConfig.baseUrl}/api/Horses/${session.horseId}`,
             {
@@ -539,10 +542,14 @@ app.get('/api/user/performance/:recordingId', requireAuth, async (req, res) => {
             }
           );
           session.horseName = horseResponse.data.name;
+          console.log(`Horse name fetched: ${session.horseName}`);
         } catch (horseError) {
           console.error('Failed to fetch horse name:', horseError.message);
           session.horseName = 'Unknown';
         }
+      } else if (!session.horseId) {
+        console.log('No horseId in session data');
+        session.horseName = 'Unknown Horse';
       }
 
       // Combine performance data with session info

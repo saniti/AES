@@ -1853,3 +1853,84 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+/* Horse Details Table for Perfect Alignment */
+.horse-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.horse-details-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.horse-details-table td {
+  padding: 12px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.horse-details-table tr:last-child td {
+  border-bottom: none;
+}
+
+.horse-details-table th:nth-child(1),
+.horse-details-table td:nth-child(1) {
+  width: 100px;
+}
+
+.horse-details-table th:nth-child(2),
+.horse-details-table td:nth-child(2) {
+  width: 80px;
+}
+
+.horse-details-table th:nth-child(3),
+.horse-details-table td:nth-child(3) {
+  width: 60px;
+}
+
+.horse-details-table th:nth-child(4),
+.horse-details-table td:nth-child(4) {
+  width: 90px;
+}
+
+.horse-details-table th:nth-child(5),
+.horse-details-table td:nth-child(5) {
+  width: 180px;
+}
+
+.horse-details-table th:nth-child(6),
+.horse-details-table td:nth-child(6) {
+  width: 100px;
+}
+
+.horse-details-table th:nth-child(7),
+.horse-details-table td:nth-child(7) {
+  width: 120px;
+}
+
+@media (max-width: 768px) {
+  .horse-details-table {
+    font-size: 12px;
+  }
+
+  .horse-details-table th,
+  .horse-details-table td {
+    padding: 6px 8px;
+  }
+
+  .horse-details-table th {
+    font-size: 10px;
+  }
+}

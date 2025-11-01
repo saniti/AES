@@ -253,40 +253,26 @@
             </div>
           </div>
           
-          <div class="horse-details-horizontal">
-            <div class="detail-item detail-brand">
-              <span class="detail-label">Brand</span>
-              <span class="detail-value">${escapeHtml(horse.brand || 'N/A')}</span>
-            </div>
-            <div class="detail-item detail-gender">
-              <span class="detail-label">Gender</span>
-              <span class="detail-value">${escapeHtml(horse.gender || 'N/A')}</span>
-            </div>
-            <div class="detail-item detail-age">
-              <span class="detail-label">Age</span>
-              <span class="detail-value">${age}</span>
-            </div>
-            <div class="detail-item detail-status">
-              <span class="detail-label">Status</span>
-              <span class="detail-value status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</span>
-            </div>
-            <div class="detail-item detail-session">
-              <span class="detail-label">Last Session</span>
-              <span class="detail-value">
-                ${horse.lastSession ? `<span class="session-link" onclick="goToLastSession('${horse.id}', '${horse.lastSession}')">${formatDateTimeShort(horse.lastSession)}</span>` : 'Never'}
-              </span>
-            </div>
-            <div class="detail-item detail-duration">
-              <span class="detail-label">Duration</span>
-              <span class="detail-value">${horse.lastSessionDuration || 'N/A'}</span>
-            </div>
-            ${horse.rfid ? `
-            <div class="detail-item detail-rfid">
-              <span class="detail-label">RFID</span>
-              <span class="detail-value">${escapeHtml(horse.rfid)}</span>
-            </div>
-            ` : ''}
-          </div>
+          <table class="horse-details-table">
+            <tr>
+              <th>Brand</th>
+              <th>Gender</th>
+              <th>Age</th>
+              <th>Status</th>
+              <th>Last Session</th>
+              <th>Duration</th>
+              ${horse.rfid ? '<th>RFID</th>' : ''}
+            </tr>
+            <tr>
+              <td>${escapeHtml(horse.brand || 'N/A')}</td>
+              <td>${escapeHtml(horse.gender || 'N/A')}</td>
+              <td>${age}</td>
+              <td class="status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</td>
+              <td>${horse.lastSession ? `<span class="session-link" onclick="goToLastSession('${horse.id}', '${horse.lastSession}', '${escapeHtml(horse.name)}')">${formatDateTimeShort(horse.lastSession)}</span>` : 'Never'}</td>
+              <td>${horse.lastSessionDuration || 'N/A'}</td>
+              ${horse.rfid ? `<td>${escapeHtml(horse.rfid)}</td>` : ''}
+            </tr>
+          </table>
 
           <div class="horse-actions-horizontal">
             <button class="btn-icon" onclick="editHorse('${horse.id}')" title="Edit">✏️</button>
@@ -317,7 +303,7 @@
       window.location.href = `/sessions?horseId=${horseId}&horseName=${encodeURIComponent(horseName)}`;
     }
 
-    async function goToLastSession(horseId, lastSessionDate) {
+    async function goToLastSession(horseId, lastSessionDate, horseName) {
       // Fetch sessions for this horse to find the matching recording ID
       try {
         const response = await fetch(`/api/user/sessions/${currentStableId}/7`);
@@ -332,6 +318,9 @@
         );
         
         if (matchingSession) {
+          // Store horse name in sessionStorage for performance page
+          sessionStorage.setItem('currentHorseName', horseName || 'Unknown Horse');
+          sessionStorage.setItem('currentHorseId', horseId);
           window.location.href = `/performance/${matchingSession.id}`;
         } else {
           // Fallback to filtered sessions view
