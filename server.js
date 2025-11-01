@@ -14,6 +14,15 @@ const PORT = process.env.PORT || 3000;
 const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
 // Middleware
+// Set Content Security Policy to allow inline scripts
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
+  );
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
