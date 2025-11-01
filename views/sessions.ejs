@@ -4,11 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sessions - Alerte Equine Science</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/themes.css">
 </head>
-<body>
+<body class="with-sidebar">
   <%- include('nav') %>
+  <script>
+    // Apply saved theme immediately
+    const savedTheme = localStorage.getItem('theme') || 'default';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
 
   <div class="main-content">
     <div class="page-header">
@@ -159,35 +165,46 @@
 
       emptyEl.style.display = 'none';
 
-      container.innerHTML = sessions.map(session => {
-        const duration = calculateDuration(session.startTime, session.stopTime);
-        const isHighlighted = filterDate && new Date(session.startTime).getTime() === new Date(filterDate).getTime();
-        const injuryRisk = String(session.trafficLight || session.injuryLevel || 'Green');
-        const riskLabel = injuryRisk === 'Green' ? 'Low Risk' : injuryRisk === 'Yellow' ? 'Medium Risk' : injuryRisk === 'Red' ? 'High Risk' : 'Low Risk';
-        
-        return `
-          <div class="session-row ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')">
-            <div class="session-row-header">
-              <span class="session-horse-name">${escapeHtml(session.horseName || 'Unknown Horse')}</span>
-              <span class="traffic-indicator traffic-${injuryRisk.toLowerCase()}">${riskLabel}</span>
-            </div>
-            <table class="session-details-table">
-              <tr>
-                <th>Date/Time</th>
-                <th>Duration</th>
-                <th>Rider</th>
-                <th>Track</th>
-              </tr>
-              <tr>
-                <td>${formatDateTime(session.startTime)}</td>
-                <td>${duration}</td>
-                <td>${escapeHtml(session.rider || 'N/A')}</td>
-                <td>${escapeHtml(session.track || 'N/A')}</td>
-              </tr>
-            </table>
-          </div>
-        `;
-      }).join('');
+      // Create table structure like horses page
+      const injuryRiskLabel = (risk) => {
+        const r = String(risk).toLowerCase();
+        return r === 'green' ? 'Low Risk' : r === 'yellow' ? 'Medium Risk' : r === 'red' ? 'High Risk' : 'Low Risk';
+      };
+
+      container.innerHTML = `
+        <table class="horse-details-table">
+          <thead>
+            <tr>
+              <th>Horse</th>
+              <th>Risk</th>
+              <th>Session Date/Time</th>
+              <th>Duration</th>
+              <th>Rider</th>
+              <th>Track</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sessions.map(session => {
+              const duration = calculateDuration(session.startTime, session.stopTime);
+              const isHighlighted = filterDate && new Date(session.startTime).getTime() === new Date(filterDate).getTime();
+              const injuryRisk = String(session.trafficLight || session.injuryLevel || 'Green').toLowerCase();
+              const horseName = session.horseName || 'Unknown Horse';
+              const alias = session.horseAlias ? ` (${session.horseAlias})` : '';
+              
+              return `
+                <tr class="${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')" style="cursor: pointer;">
+                  <td><strong>${escapeHtml(horseName)}</strong>${alias}</td>
+                  <td><span class="traffic-indicator traffic-${injuryRisk}">${injuryRiskLabel(injuryRisk)}</span></td>
+                  <td>${formatDateTime(session.startTime)}</td>
+                  <td>${duration}</td>
+                  <td>${escapeHtml(session.rider || 'N/A')}</td>
+                  <td>${escapeHtml(session.track || 'N/A')}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
     }
 
     function viewSession(sessionId) {
