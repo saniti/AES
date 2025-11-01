@@ -54,12 +54,13 @@
         No horses found for this stable.
       </div>
 
-      <div id="horsesContainer" class="horses-list"></div>
-
-      <h2 style="margin-top: 40px; margin-bottom: 20px;">Unassigned Sessions</h2>
+      <h2 style="margin-bottom: 20px;">Unassigned Sessions</h2>
       <div id="unassignedLoading" class="loading" style="display: none;">Loading unassigned sessions...</div>
       <div id="unassignedEmpty" class="empty-message" style="display: none;">No unassigned sessions</div>
-      <div id="unassignedContainer" class="unassigned-sessions"></div>
+      <div id="unassignedContainer" class="unassigned-sessions" style="margin-bottom: 40px;"></div>
+
+      <h2 style="margin-bottom: 20px;">Horses</h2>
+      <div id="horsesContainer" class="horses-list"></div>
     </div>
   </main>
 
@@ -260,7 +261,6 @@
               <th>Age</th>
               <th>Status</th>
               <th>Last Session</th>
-              <th>Duration</th>
               ${horse.rfid ? '<th>RFID</th>' : ''}
             </tr>
             <tr>
@@ -268,8 +268,7 @@
               <td>${escapeHtml(horse.gender || 'N/A')}</td>
               <td>${age}</td>
               <td class="status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</td>
-              <td>${horse.lastSession ? `<span class="session-link" onclick="goToLastSession('${horse.id}', '${horse.lastSession}', '${escapeHtml(horse.name)}')">${formatDateTimeShort(horse.lastSession)}</span>` : 'Never'}</td>
-              <td>${horse.lastSessionDuration || 'N/A'}</td>
+              <td>${horse.lastSession ? `<span class="session-link" onclick="goToPerformance('${horse.id}', '${horse.lastSession}', '${escapeHtml(horse.name)}')">${ formatDateTimeShort(horse.lastSession)}</span>` : 'Never'}</td>
               ${horse.rfid ? `<td>${escapeHtml(horse.rfid)}</td>` : ''}
             </tr>
           </table>
@@ -303,48 +302,34 @@
       window.location.href = `/sessions?horseId=${horseId}&horseName=${encodeURIComponent(horseName)}`;
     }
 
-    async function goToLastSession(horseId, lastSessionDate, horseName) {
-      console.log('goToLastSession called:', { horseId, lastSessionDate, horseName });
+    async function goToPerformance(horseId, lastSessionDate, horseName) {
+      // Store horse info for performance page
+      sessionStorage.setItem('currentHorseName', horseName || 'Unknown Horse');
+      sessionStorage.setItem('currentHorseId', horseId);
       
-      // Fetch sessions for this horse to find the matching recording ID
+      // Fetch the most recent session for this horse
       try {
-        const url = `/api/user/sessions/${currentStableId}/7`;
-        console.log('Fetching sessions from:', url);
-        const response = await fetch(url);
+        const response = await fetch(`/api/user/sessions/${currentStableId}/7`);
         if (!response.ok) throw new Error('Failed to fetch sessions');
         
         const sessions = await response.json();
-        console.log(`Received ${sessions.length} sessions`);
         
-        // Find session matching horse and date
-        const targetDate = new Date(lastSessionDate).getTime();
-        console.log('Looking for session with horseId:', horseId, 'and date:', targetDate);
+        // Find the most recent session for this horse
+        const horseSessions = sessions.filter(s => String(s.horseId) === String(horseId));
         
-        const matchingSession = sessions.find(s => {
-          const match = String(s.horseId) === String(horseId) && 
-                       new Date(s.startTime).getTime() === targetDate;
-          if (String(s.horseId) === String(horseId)) {
-            console.log('  Found session for horse:', s.id, 'startTime:', new Date(s.startTime).getTime(), 'match:', match);
-          }
-          return match;
-        });
-        
-        if (matchingSession) {
-          console.log('Matching session found:', matchingSession.id);
-          // Store horse name in sessionStorage for performance page
-          sessionStorage.setItem('currentHorseName', horseName || 'Unknown Horse');
-          sessionStorage.setItem('currentHorseId', horseId);
-          const performanceUrl = `/performance/${matchingSession.id}`;
-          console.log('Navigating to:', performanceUrl);
-          window.location.href = performanceUrl;
+        if (horseSessions.length > 0) {
+          // Sort by startTime descending and get the most recent
+          horseSessions.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+          const latestSession = horseSessions[0];
+          
+          // Navigate directly to performance page
+          window.location.href = `/performance/${latestSession.id}`;
         } else {
-          console.log('No matching session found, falling back to sessions list');
-          // Fallback to filtered sessions view
-          window.location.href = `/sessions?horseId=${horseId}&date=${lastSessionDate}`;
+          alert('No sessions found for this horse');
         }
       } catch (error) {
-        console.error('Error finding session:', error);
-        alert('Could not find session details: ' + error.message);
+        console.error('Error:', error);
+        alert('Could not load session: ' + error.message);
       }
     }
 

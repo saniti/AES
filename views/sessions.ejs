@@ -1,140 +1,126 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="default">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sessions - <%= appName %></title>
-  <link rel="stylesheet" href="/css/themes.css">
+  <title>Sessions - Alerte Equine Science</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/locale.js"></script>
+  <link rel="stylesheet" href="/css/themes.css">
 </head>
-<body class="with-sidebar">
-  <%- include('nav', { user: user }) %>
+<body>
+  <%- include('nav') %>
 
-  <main class="main-content">
-    <header class="top-header">
+  <div class="main-content">
+    <div class="page-header">
       <h1>Training Sessions</h1>
-    </header>
-
-    <div class="content-wrapper">
-      <% if (demoMode) { %>
-        <div class="alert alert-info">
-          <strong>Demo Mode:</strong> Showing demo session data.
-        </div>
-      <% } %>
-
-      <div class="sessions-controls">
-        <div class="time-filter">
-          <button class="filter-btn active" data-days="7">Past 7 Days</button>
-          <button class="filter-btn" data-days="30">Past 30 Days</button>
-          <button class="filter-btn" data-days="60">Past 60 Days</button>
-          <button class="filter-btn" data-days="90">Past 90 Days</button>
-          <button class="filter-btn" data-days="all">All</button>
-        </div>
-        
-        <div class="search-filter">
-          <input type="text" id="horseFilter" placeholder="Filter by horse name..." />
-        </div>
-      </div>
-
-      <div id="loadingMessage" class="loading">Loading sessions...</div>
-      <div id="errorMessage" class="error-message" style="display: none;"></div>
-      <div id="emptyMessage" class="empty-message" style="display: none;">
-        No sessions found for this period.
-      </div>
-
-      <div id="sessionsContainer" class="sessions-list"></div>
     </div>
-  </main>
+
+    <div class="filters-container">
+      <div class="time-filters">
+        <button class="filter-btn active" data-days="7">Past 7 Days</button>
+        <button class="filter-btn" data-days="30">Past 30 Days</button>
+        <button class="filter-btn" data-days="60">Past 60 Days</button>
+        <button class="filter-btn" data-days="90">Past 90 Days</button>
+        <button class="filter-btn" data-days="all">All</button>
+      </div>
+
+      <div class="search-filters">
+        <input type="text" id="searchInput" placeholder="Search by horse name..." class="search-input">
+      </div>
+    </div>
+
+    <div id="loadingMessage" class="loading-message">Loading sessions...</div>
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="emptyMessage" class="empty-message" style="display: none;">No sessions found</div>
+
+    <div id="sessionsContainer" class="sessions-list"></div>
+  </div>
 
   <script>
     let allSessions = [];
     let currentStableId = null;
     let currentDays = 7;
     let filterHorseId = null;
+    let filterDate = null;
 
-    // Check for horse filter from URL
+    // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     filterHorseId = urlParams.get('horseId');
-    const filterDate = urlParams.get('date');
-    if (filterHorseId) {
-      const horseName = urlParams.get('horseName');
-      if (horseName) {
-        document.getElementById('horseFilter').value = horseName;
+    filterDate = urlParams.get('date');
+
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function calculateDuration(startTime, stopTime) {
+      if (!startTime || !stopTime) return 'N/A';
+      const start = new Date(startTime);
+      const stop = new Date(stopTime);
+      const durationMs = stop - start;
+      
+      const totalSeconds = Math.floor(durationMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return 'N/A';
+      const date = new Date(dateStr);
+      const locale = getCurrentLocale();
+      
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        return `${translate('today')} ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
+      } else if (diffDays === 1) {
+        return `${translate('yesterday')} ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        return date.toLocaleDateString(locale, { year: '2-digit', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       }
     }
 
-    // Load sessions when stable changes
-    window.addEventListener('stableChanged', (e) => {
-      currentStableId = e.detail.stableId;
-      loadSessions(currentStableId, currentDays);
-    });
+    function formatTime(dateStr) {
+      if (!dateStr) return 'N/A';
+      const date = new Date(dateStr);
+      const locale = getCurrentLocale();
+      return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    }
 
-    // Load sessions on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      currentStableId = localStorage.getItem('selectedStable');
-      if (currentStableId) {
-        loadSessions(currentStableId, currentDays);
-      } else {
-        document.getElementById('loadingMessage').textContent = 'Please select a stable';
-      }
-
-      // Setup time filter buttons
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          const daysValue = btn.dataset.days;
-          currentDays = daysValue === 'all' ? 'all' : parseInt(daysValue);
-          loadSessions(currentStableId, currentDays);
-        });
-      });
-
-      // Setup horse filter
-      document.getElementById('horseFilter').addEventListener('input', filterSessions);
-    });
-
-    async function loadSessions(stableId, days) {
-      if (!stableId) return;
-
+    async function loadSessions(days) {
       const loadingEl = document.getElementById('loadingMessage');
       const errorEl = document.getElementById('errorMessage');
       const emptyEl = document.getElementById('emptyMessage');
-      const containerEl = document.getElementById('sessionsContainer');
+      const container = document.getElementById('sessionsContainer');
 
       loadingEl.style.display = 'block';
       errorEl.style.display = 'none';
       emptyEl.style.display = 'none';
-      containerEl.innerHTML = '';
+      container.innerHTML = '';
 
       try {
-        console.log(`Fetching sessions for stable ${stableId}, days: ${days}`);
-        const response = await fetch(`/api/user/sessions/${stableId}/${days}`);
+        const response = await fetch(`/api/user/sessions/${currentStableId}/${days}`);
         
         if (!response.ok) {
-          console.error('Sessions API response not ok:', response.status, response.statusText);
-          throw new Error('Failed to fetch sessions');
+          throw new Error('Failed to load sessions');
         }
 
         allSessions = await response.json();
-        console.log(`Received ${allSessions.length} sessions`);
-        console.log('Sessions data:', allSessions);
+        console.log('Loaded sessions:', allSessions.length);
         
-        // Sort by startTime (most recent first)
-        allSessions.sort((a, b) => {
-          const dateA = new Date(a.startTime);
-          const dateB = new Date(b.startTime);
-          return dateB - dateA;
-        });
-
         loadingEl.style.display = 'none';
-
-        if (allSessions.length === 0) {
-          emptyEl.style.display = 'block';
-        } else {
-          // Apply filtering if horseId is in URL
-          filterSessions();
-        }
+        filterSessions();
       } catch (error) {
         console.error('Error loading sessions:', error);
         loadingEl.style.display = 'none';
@@ -144,9 +130,10 @@
     }
 
     function filterSessions() {
-      const searchTerm = document.getElementById('horseFilter').value.toLowerCase();
-
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      
       const filtered = allSessions.filter(session => {
+        // Match by search term (horse name)
         const matchesSearch = !searchTerm || 
           (session.horseName && session.horseName.toLowerCase().includes(searchTerm));
         
@@ -175,94 +162,61 @@
       container.innerHTML = sessions.map(session => {
         const duration = calculateDuration(session.startTime, session.stopTime);
         const isHighlighted = filterDate && new Date(session.startTime).getTime() === new Date(filterDate).getTime();
+        const injuryRisk = String(session.trafficLight || session.injuryLevel || 'Green');
+        const riskLabel = injuryRisk === 'Green' ? 'Low Risk' : injuryRisk === 'Yellow' ? 'Medium Risk' : injuryRisk === 'Red' ? 'High Risk' : 'Low Risk';
+        
         return `
-          <div class="session-card ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')">
-            <div class="session-header">
-              <div class="session-info">
-                <h3 class="session-horse">${escapeHtml(session.horseName || 'Unknown Horse')}</h3>
-                <span class="session-date">${formatDateTime(session.startTime)}</span>
-              </div>
-              <div class="traffic-indicator traffic-${String(session.trafficLight || session.injuryLevel || 'Green').toLowerCase()}">
-                ${String(session.trafficLight || session.injuryLevel || 'Green') === 'Green' ? 'Low Risk' : String(session.trafficLight || session.injuryLevel || 'Yellow') === 'Yellow' ? 'Medium Risk' : String(session.trafficLight || session.injuryLevel || 'Red') === 'Red' ? 'High Risk' : 'Low Risk'}
-              </div>
+          <div class="session-row ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')">
+            <div class="session-row-header">
+              <span class="session-horse-name">${escapeHtml(session.horseName || 'Unknown Horse')}</span>
+              <span class="traffic-indicator traffic-${injuryRisk.toLowerCase()}">${riskLabel}</span>
             </div>
-
-            <div class="session-details">
-              <div class="detail-item">
-                <span class="icon">⏱️</span>
-                <span class="label">Duration:</span>
-                <span class="value">${duration}</span>
-              </div>
-              ${session.rider ? `
-              <div class="detail-item">
-                <span class="icon">👤</span>
-                <span class="label">Rider:</span>
-                <span class="value">${escapeHtml(session.rider)}</span>
-              </div>
-              ` : ''}
-              ${session.track ? `
-              <div class="detail-item">
-                <span class="icon">🏁</span>
-                <span class="label">Track:</span>
-                <span class="value">${escapeHtml(session.track)}</span>
-              </div>
-              ` : ''}
-              <div class="detail-item">
-                <span class="icon">🕐</span>
-                <span class="label">Started:</span>
-                <span class="value">${formatTime(session.startTime)}</span>
-              </div>
-            </div>
+            <table class="session-details-table">
+              <tr>
+                <th>Date/Time</th>
+                <th>Duration</th>
+                <th>Rider</th>
+                <th>Track</th>
+              </tr>
+              <tr>
+                <td>${formatDateTime(session.startTime)}</td>
+                <td>${duration}</td>
+                <td>${escapeHtml(session.rider || 'N/A')}</td>
+                <td>${escapeHtml(session.track || 'N/A')}</td>
+              </tr>
+            </table>
           </div>
         `;
       }).join('');
     }
 
     function viewSession(sessionId) {
-      window.location.href = `/session/${sessionId}`;
+      window.location.href = `/performance/${sessionId}`;
     }
 
-    function calculateDuration(startTime, stopTime) {
-      if (!startTime || !stopTime) return 'N/A';
-      const start = new Date(startTime);
-      const stop = new Date(stopTime);
-      const diffMs = stop - start;
-      const totalSeconds = Math.floor(diffMs / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
-
-    function formatDateTime(dateStr) {
-      if (!dateStr) return 'N/A';
-      const locale = getCurrentLocale();
-      const date = new Date(dateStr);
-      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
-      return date.toLocaleDateString(localeCode, { 
-        weekday: 'short',
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+    // Event listeners
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentDays = this.dataset.days;
+        loadSessions(currentDays);
       });
-    }
+    });
 
-    function formatTime(dateStr) {
-      if (!dateStr) return 'N/A';
-      const locale = getCurrentLocale();
-      const date = new Date(dateStr);
-      const localeCode = LOCALES[locale]?.dateFormat || 'en-AU';
-      return date.toLocaleTimeString(localeCode, { 
-        hour: '2-digit', 
-        minute: '2-digit'
-      });
-    }
+    document.getElementById('searchInput').addEventListener('input', filterSessions);
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    // Listen for stable changes
+    window.addEventListener('stableChanged', (e) => {
+      currentStableId = e.detail.stableId;
+      loadSessions(currentDays);
+    });
+
+    // Initial load
+    const stableSelect = document.getElementById('stableSelect');
+    if (stableSelect && stableSelect.value) {
+      currentStableId = stableSelect.value;
+      loadSessions(currentDays);
     }
   </script>
 </body>

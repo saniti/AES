@@ -689,83 +689,20 @@ app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
   }
 
   try {
-    const [horsesResponse, sessionsResponse] = await Promise.all([
-      axios.get(
-        `${apiConfig.baseUrl}/api/Horses/session/stableId/${stableId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${req.session.accessToken}`
-          }
-        }
-      ),
-      axios.get(
-        `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${req.session.accessToken}`
-          }
-        }
-      )
-    ]);
-
-    const horses = horsesResponse.data;
-    const sessions = sessionsResponse.data;
-    
-    console.log('Sessions response type:', typeof sessions);
-    console.log('Sessions is array:', Array.isArray(sessions));
-    console.log('Sessions data:', sessions);
-    if (Array.isArray(sessions)) {
-      console.log('First session:', sessions[0]);
-    }
-
-    // Create session lookup map by horseId
-    const sessionMap = {};
-    if (Array.isArray(sessions)) {
-      sessions.forEach(session => {
-        console.log('Processing session:', { id: session.id, horseId: session.horseId, startTime: session.startTime });
-        if (session.horseId) {
-          if (!sessionMap[session.horseId] || new Date(session.startTime) > new Date(sessionMap[session.horseId].startTime)) {
-            sessionMap[session.horseId] = session;
-          }
-        }
-      });
-    }
-
-    // Add duration to horses
-    console.log(`Processing ${Array.isArray(horses) ? horses.length : 0} horses`);
-    console.log(`Session map has ${Object.keys(sessionMap).length} entries`);
-    
-    const enrichedHorses = Array.isArray(horses) ? horses.map(horse => {
-      const lastSession = sessionMap[horse.id];
-      console.log(`Horse ${horse.name} (${horse.id}): lastSession=${lastSession ? 'found' : 'NOT FOUND'}`);
-      
-      let duration = 'N/A';
-      if (lastSession) {
-        console.log(`  Session times: start=${lastSession.startTime}, stop=${lastSession.stopTime}`);
-        if (lastSession.startTime && lastSession.stopTime) {
-          const durationMs = new Date(lastSession.stopTime) - new Date(lastSession.startTime);
-          const totalSeconds = Math.floor(durationMs / 1000);
-          const hours = Math.floor(totalSeconds / 3600);
-          const minutes = Math.floor((totalSeconds % 3600) / 60);
-          const seconds = totalSeconds % 60;
-          duration = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-          console.log(`  Calculated duration: ${duration}`);
-        } else {
-          console.log(`  Missing start or stop time`);
+    // Just fetch horses - duration calculation was causing timeouts
+    const horsesResponse = await axios.get(
+      `${apiConfig.baseUrl}/api/Horses/session/stableId/${stableId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${req.session.accessToken}`
         }
       }
-      return {
-        ...horse,
-        lastSessionDuration: duration
-      };
-    }) : [];
-    
-    console.log(`Returning ${enrichedHorses.length} enriched horses`);
-    if (enrichedHorses.length > 0) {
-      console.log(`Sample horse: ${enrichedHorses[0].name}, duration: ${enrichedHorses[0].lastSessionDuration}`);
-    }
+    );
 
-    res.json(enrichedHorses);
+    const horses = horsesResponse.data;
+    
+    // Return horses directly without duration calculation to avoid timeouts
+    res.json(Array.isArray(horses) ? horses : []);
   } catch (error) {
     console.error('Horses API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
