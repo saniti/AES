@@ -32,8 +32,18 @@
             </div>
           </div>
 
-          <!-- Key Metrics Cards -->
-          <div class="metrics-grid">
+          <!-- Tab Navigation -->
+          <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('metrics')">Performance Metrics</button>
+            <button class="tab-btn" onclick="switchTab('charts')">Charts & Graphs</button>
+            <button class="tab-btn" onclick="switchTab('data')">Raw Data</button>
+            <button class="tab-btn" onclick="switchTab('analysis')">Analysis</button>
+          </div>
+
+          <!-- Tab Content -->
+          <div id="tab-metrics" class="tab-content active">
+            <!-- Key Metrics Cards -->
+            <div class="metrics-grid">
             <div class="metric-card">
               <div class="metric-label">Max Heart Rate</div>
               <div class="metric-value" id="maxHR">--</div>
@@ -66,8 +76,11 @@
             </div>
           </div>
 
-          <!-- Charts Section -->
-          <div class="charts-section">
+          </div>
+
+          <div id="tab-charts" class="tab-content">
+            <!-- Charts Section -->
+            <div class="charts-section">
             <div class="chart-container">
               <h3>Speed vs Heart Rate</h3>
               <canvas id="speedHeartRateChart"></canvas>
@@ -84,8 +97,11 @@
             </div>
           </div>
 
-          <!-- Data Table -->
-          <div class="data-table-section">
+          </div>
+
+          <div id="tab-data" class="tab-content">
+            <!-- Data Table -->
+            <div class="data-table-section">
             <h3>Detailed Data Points</h3>
             <div class="table-responsive">
               <table id="dataTable" class="data-table">
@@ -100,6 +116,33 @@
                 <tbody id="dataTableBody">
                 </tbody>
               </table>
+            </div>
+          </div>
+          </div>
+
+          <div id="tab-analysis" class="tab-content">
+            <div class="analysis-section">
+              <h3>Performance Analysis</h3>
+              <div class="analysis-grid">
+                <div class="analysis-card">
+                  <h4>Cardiovascular Performance</h4>
+                  <div id="cardioAnalysis" class="analysis-content">
+                    <p>Loading analysis...</p>
+                  </div>
+                </div>
+                <div class="analysis-card">
+                  <h4>Speed Performance</h4>
+                  <div id="speedAnalysis" class="analysis-content">
+                    <p>Loading analysis...</p>
+                  </div>
+                </div>
+                <div class="analysis-card">
+                  <h4>Training Recommendations</h4>
+                  <div id="recommendations" class="analysis-content">
+                    <p>Loading recommendations...</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -168,6 +211,9 @@
         createCharts(data.speedHeartRate.speedHeartRateChart);
         createDataTable(data.speedHeartRate.speedHeartRateChart);
       }
+
+      // Generate analysis
+      generateAnalysis(data);
     }
 
     function createCharts(chartData) {
@@ -295,6 +341,73 @@
           <td>${d.speed ? (d.speed * 3.6).toFixed(2) : '--'}</td>
         </tr>
       `).join('');
+    }
+
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // Show selected tab
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function generateAnalysis(data) {
+      if (!data.speedHeartRate) return;
+
+      const shr = data.speedHeartRate;
+
+      // Cardiovascular Analysis
+      let cardioHTML = '<ul>';
+      if (shr.maxHR) {
+        const hrZone = shr.maxHR > 200 ? 'Excellent' : shr.maxHR > 180 ? 'Good' : 'Moderate';
+        cardioHTML += `<li><strong>Max HR:</strong> ${shr.maxHR} BPM - ${hrZone} cardiovascular capacity</li>`;
+      }
+      if (shr.hR13Point3) {
+        cardioHTML += `<li><strong>HR at 13.3 m/s:</strong> ${shr.hR13Point3} BPM - Indicates efficiency at racing speed</li>`;
+      }
+      if (shr.heartRateRecovery) {
+        cardioHTML += `<li><strong>Recovery:</strong> Good cardiovascular recovery observed</li>`;
+      }
+      cardioHTML += '</ul>';
+      document.getElementById('cardioAnalysis').innerHTML = cardioHTML;
+
+      // Speed Analysis
+      let speedHTML = '<ul>';
+      if (shr.maxBPMSpeed) {
+        const speedKmh = (shr.maxBPMSpeed * 3.6).toFixed(1);
+        speedHTML += `<li><strong>Max Speed:</strong> ${shr.maxBPMSpeed.toFixed(2)} m/s (${speedKmh} km/h)</li>`;
+      }
+      if (shr.bpM200Speed) {
+        const speed200 = (shr.bpM200Speed * 3.6).toFixed(1);
+        speedHTML += `<li><strong>Speed at 200 BPM:</strong> ${shr.bpM200Speed.toFixed(2)} m/s (${speed200} km/h)</li>`;
+      }
+      if (data.preWorkTime) {
+        speedHTML += `<li><strong>Warm-up:</strong> ${data.preWorkTime.toFixed(1)} minutes - ${data.preWorkTime > 15 ? 'Adequate' : 'Consider longer warm-up'}</li>`;
+      }
+      speedHTML += '</ul>';
+      document.getElementById('speedAnalysis').innerHTML = speedHTML;
+
+      // Recommendations
+      let recsHTML = '<ul>';
+      if (shr.maxHR && shr.maxHR < 180) {
+        recsHTML += '<li>Consider increasing workout intensity to improve cardiovascular capacity</li>';
+      }
+      if (data.preWorkTime && data.preWorkTime < 15) {
+        recsHTML += '<li>Extend warm-up period to 15-20 minutes for optimal performance</li>';
+      }
+      if (shr.bpM200Speed && shr.maxBPMSpeed && (shr.maxBPMSpeed - shr.bpM200Speed) < 1) {
+        recsHTML += '<li>Work on speed endurance - gap between 200 BPM speed and max speed is narrow</li>';
+      }
+      recsHTML += '<li>Continue monitoring heart rate trends over multiple sessions</li>';
+      recsHTML += '<li>Maintain consistent training schedule for best results</li>';
+      recsHTML += '</ul>';
+      document.getElementById('recommendations').innerHTML = recsHTML;
     }
 
     document.addEventListener('DOMContentLoaded', () => {

@@ -580,7 +580,7 @@ footer {
 
 .horse-details-horizontal {
   display: grid;
-  grid-template-columns: 90px 70px 60px 80px 160px 80px 100px;
+  grid-template-columns: 90px 70px 60px 80px 160px 100px 100px;
   gap: 16px;
   flex: 1;
   align-items: center;
@@ -1750,5 +1750,106 @@ footer {
   .data-table td {
     padding: 8px;
     font-size: 14px;
+  }
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border-color);
+  overflow-x: auto;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  color: var(--primary-color);
+  background: var(--bg-secondary);
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Analysis Section */
+.analysis-section {
+  padding: 24px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.analysis-section h3 {
+  margin: 0 0 24px 0;
+  color: var(--text-primary);
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.analysis-card {
+  background: var(--bg-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.analysis-card h4 {
+  margin: 0 0 16px 0;
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.analysis-content {
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.analysis-content ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.analysis-content li {
+  margin-bottom: 12px;
+}
+
+.analysis-content strong {
+  color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+  .tab-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .analysis-grid {
+    grid-template-columns: 1fr;
   }
 }

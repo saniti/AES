@@ -332,7 +332,7 @@
         );
         
         if (matchingSession) {
-          window.location.href = `/session/${matchingSession.id}`;
+          window.location.href = `/performance/${matchingSession.id}`;
         } else {
           // Fallback to filtered sessions view
           window.location.href = `/sessions?horseId=${horseId}&date=${lastSessionDate}`;

@@ -719,13 +719,14 @@ app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
     // Add duration to horses
     const enrichedHorses = Array.isArray(horses) ? horses.map(horse => {
       const lastSession = sessionMap[horse.id];
-      let duration = null;
+      let duration = 'N/A';
       if (lastSession && lastSession.startTime && lastSession.stopTime) {
         const durationMs = new Date(lastSession.stopTime) - new Date(lastSession.startTime);
-        const minutes = Math.floor(durationMs / 60000);
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-        duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        const totalSeconds = Math.floor(durationMs / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        duration = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
       }
       return {
         ...horse,
