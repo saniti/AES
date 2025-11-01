@@ -510,7 +510,7 @@ app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res)
     ]);
   }
 
-  const url = `${apiConfig.baseUrl}/Recordings/unassigned/session/stable/${stableId}`;
+  const url = `${apiConfig.baseUrl}/api/Recordings/unassigned/session/stable/${stableId}`;
   try {
     const response = await axios.get(url, { headers: { Authorization: `Bearer ${req.session.accessToken}` } });
     let data = response.data;
