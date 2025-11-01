@@ -54,10 +54,12 @@
         No horses found for this stable.
       </div>
 
-      <h2 style="margin-bottom: 20px;">Unassigned Sessions</h2>
-      <div id="unassignedLoading" class="loading" style="display: none;">Loading unassigned sessions...</div>
-      <div id="unassignedEmpty" class="empty-message" style="display: none;">No unassigned sessions</div>
-      <div id="unassignedContainer" class="unassigned-sessions" style="margin-bottom: 40px;"></div>
+      <div id="unassignedSection" style="display: none;">
+        <h2 style="margin-bottom: 20px;">Unassigned Sessions</h2>
+        <div id="unassignedLoading" class="loading" style="display: none;">Loading unassigned sessions...</div>
+        <div id="unassignedEmpty" class="empty-message" style="display: none;">No unassigned sessions</div>
+        <div id="unassignedContainer" class="unassigned-sessions" style="margin-bottom: 40px;"></div>
+      </div>
 
       <h2 style="margin-bottom: 20px;">Horses</h2>
       <div id="horsesContainer" class="horses-list"></div>
@@ -440,10 +442,12 @@
     async function loadUnassignedSessions(stableId) {
       if (!stableId) return;
 
+      const sectionEl = document.getElementById('unassignedSection');
       const loadingEl = document.getElementById('unassignedLoading');
       const emptyEl = document.getElementById('unassignedEmpty');
       const containerEl = document.getElementById('unassignedContainer');
 
+      sectionEl.style.display = 'block';
       loadingEl.style.display = 'block';
       emptyEl.style.display = 'none';
       containerEl.innerHTML = '';
@@ -454,8 +458,7 @@
         if (!response.ok) {
           console.error('Unassigned sessions response not ok:', response.status, response.statusText);
           loadingEl.style.display = 'none';
-          emptyEl.style.display = 'block';
-          emptyEl.textContent = 'Unable to load unassigned sessions';
+          sectionEl.style.display = 'none';
           return;
         }
 
@@ -465,8 +468,7 @@
         loadingEl.style.display = 'none';
 
         if (!Array.isArray(sessions) || sessions.length === 0) {
-          emptyEl.style.display = 'block';
-          emptyEl.textContent = 'No unassigned sessions';
+          sectionEl.style.display = 'none';
         } else {
           displayUnassignedSessions(sessions);
         }

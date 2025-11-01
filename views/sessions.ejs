@@ -212,6 +212,20 @@
       loadSessions(currentDays);
     });
 
+    // Helper functions for locale
+    function getCurrentLocale() {
+      return localStorage.getItem('userLocale') || 'en-AU';
+    }
+    
+    function translate(key) {
+      const translations = {
+        'today': { 'en-AU': 'Today', 'en-US': 'Today', 'es-ES': 'Hoy' },
+        'yesterday': { 'en-AU': 'Yesterday', 'en-US': 'Yesterday', 'es-ES': 'Ayer' }
+      };
+      const locale = getCurrentLocale();
+      return translations[key]?.[locale] || key;
+    }
+
     // Initial load
     const stableSelect = document.getElementById('stableSelect');
     if (stableSelect && stableSelect.value) {
