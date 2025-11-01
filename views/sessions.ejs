@@ -206,10 +206,12 @@
 
     document.getElementById('searchInput').addEventListener('input', filterSessions);
 
-    // Listen for stable changes
+    // Listen for stable changes (after initial load)
     window.addEventListener('stableChanged', (e) => {
-      currentStableId = e.detail.stableId;
-      loadSessions(currentDays);
+      if (hasLoaded) {
+        currentStableId = e.detail.stableId;
+        loadSessions(currentDays);
+      }
     });
 
     // Helper functions for locale
@@ -226,12 +228,27 @@
       return translations[key]?.[locale] || key;
     }
 
-    // Initial load
-    const stableSelect = document.getElementById('stableSelect');
-    if (stableSelect && stableSelect.value) {
-      currentStableId = stableSelect.value;
-      loadSessions(currentDays);
-    }
+    // Initial load - wait for DOM and stables to load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wait a bit for nav.ejs to load stables
+      setTimeout(() => {
+        const stableSelect = document.getElementById('stableSelect');
+        if (stableSelect && stableSelect.value) {
+          currentStableId = stableSelect.value;
+          loadSessions(currentDays);
+        }
+      }, 500);
+    });
+    
+    // Also trigger initial load if stableChanged fires first
+    let hasLoaded = false;
+    window.addEventListener('stableChanged', (e) => {
+      currentStableId = e.detail.stableId;
+      if (!hasLoaded) {
+        hasLoaded = true;
+        loadSessions(currentDays);
+      }
+    }, { once: true });
   </script>
 </body>
 </html>
