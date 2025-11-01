@@ -381,10 +381,14 @@ app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
   }
 
   try {
+    console.log(`[Sessions API] Request: stableId=${stableId}, days=${days}, type=${typeof days}`);
+    
     // Determine API endpoint based on days parameter
     const apiEndpoint = days === 'all' 
       ? `${apiConfig.baseUrl}/api/Recordings/sessionMeta/stable/${stableId}`
       : `${apiConfig.baseUrl}/api/Recordings/stableId/${stableId}/${days}`;
+    
+    console.log(`[Sessions API] Using endpoint: ${apiEndpoint}`);
 
     // Fetch both recordings and horses to map names
     const [recordingsResponse, horsesResponse] = await Promise.all([
@@ -409,6 +413,8 @@ app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
     const recordings = recordingsResponse.data;
     const horses = horsesResponse.data;
 
+    console.log(`[Sessions API] Received ${Array.isArray(recordings) ? recordings.length : 'non-array'} recordings`);
+    
     // Ensure we have arrays
     const recordingsArray = Array.isArray(recordings) ? recordings : [];
     const horsesArray = Array.isArray(horses) ? horses : [];

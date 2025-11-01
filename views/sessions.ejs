@@ -177,7 +177,7 @@
 
       emptyEl.style.display = 'none';
 
-      // Create individual session cards like horses page
+      // Create horizontal layout matching horses page exactly
       const injuryRiskLabel = (risk) => {
         const r = String(risk).toLowerCase();
         return r === 'green' ? 'Low Risk' : r === 'yellow' ? 'Medium Risk' : r === 'red' ? 'High Risk' : 'Low Risk';
@@ -191,14 +191,17 @@
         const alias = session.horseAlias ? ` (${session.horseAlias})` : '';
         
         return `
-          <div class="horse-card ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')" style="cursor: pointer;">
-            <div class="horse-header">
-              <div>
+          <div class="horse-card-horizontal ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')" style="cursor: pointer;">
+            <div class="horse-main-info">
+              <div class="horse-name-badge">
                 <h3 class="horse-name">${escapeHtml(horseName)}</h3>
                 ${alias ? `<span class="horse-alias">${escapeHtml(alias)}</span>` : ''}
               </div>
-              <span class="traffic-indicator traffic-${injuryRisk}">${injuryRiskLabel(injuryRisk)}</span>
+              <div class="traffic-indicator traffic-${injuryRisk}">
+                ${injuryRiskLabel(injuryRisk)}
+              </div>
             </div>
+            
             <table class="horse-details-table">
               <tr>
                 <th>Session Date/Time</th>
