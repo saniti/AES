@@ -253,7 +253,13 @@
     // Update page title with stable name
     function updatePageTitle() {
       const stableSelect = document.getElementById('stableSelect');
-      const stableName = stableSelect ? stableSelect.options[stableSelect.selectedIndex].text : 'Selected Stable';
+      let stableName = 'Selected Stable';
+      if (stableSelect && stableSelect.selectedIndex !== -1) {
+        const selectedOption = stableSelect.options[stableSelect.selectedIndex].text;
+        if (selectedOption !== 'Loading stables...') {
+          stableName = selectedOption;
+        }
+      }
       const titleEl = document.getElementById('sessionsPageTitle');
       if (titleEl) {
         titleEl.textContent = `Training Sessions for ${stableName}`;

@@ -511,7 +511,11 @@ app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res)
       }
     );
     const sessions = response.data;
-    const sessionsArray = Array.isArray(sessions) ? sessions : [];
+    // Ensure the response is an array and map to include 'recordingId' as 'id' for consistency if needed
+    const sessionsArray = Array.isArray(sessions) ? sessions.map(s => ({
+      ...s,
+      id: s.recordingId || s.id // Ensure 'id' is present for frontend logic
+    })) : [];
     console.log(`Unassigned sessions for stable ${stableId}:`, sessionsArray.length);
     res.json(sessionsArray);
   } catch (error) {
