@@ -157,7 +157,7 @@
       currentStableId = e.detail.stableId;
       const stableName = e.detail.stableName || 'Selected Stable';
       updatePageTitle(stableName);
-      loadHorses();
+      loadHorses(currentStableId);
       loadUnassignedSessions(currentStableId);
     });
 
