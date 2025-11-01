@@ -221,18 +221,10 @@
     document.getElementById('searchInput').addEventListener('input', filterHorses);
 
     // Update page title with stable name
-    function updatePageTitle() {
-      const stableSelect = document.getElementById('stableSelect');
-      let stableName = 'Selected Stable';
-      if (stableSelect && stableSelect.selectedIndex !== -1) {
-        const selectedOption = stableSelect.options[stableSelect.selectedIndex].text;
-        if (selectedOption !== 'Loading stables...') {
-          stableName = selectedOption;
-        }
-      }
+    function updatePageTitle(stableName) {
       const titleEl = document.getElementById('injuriesPageTitle');
       if (titleEl) {
-        titleEl.textContent = `Injury Risk Management for ${stableName}`;
+        titleEl.textContent = `Injury Risk Management for ${stableName || 'Selected Stable'}`;
       }
     }
 
@@ -240,7 +232,8 @@
     window.addEventListener('stableChanged', (e) => {
       if (hasLoaded) {
         currentStableId = e.detail.stableId;
-        updatePageTitle();
+        const stableName = e.detail.stableName || 'Selected Stable';
+        updatePageTitle(stableName);
         loadHorses();
       }
     });

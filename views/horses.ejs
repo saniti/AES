@@ -146,27 +146,18 @@
     let currentAssignSessionId = null;
 
     // Update page title with stable name
-    function updatePageTitle() {
-      const stableSelect = document.getElementById('stableSelect');
-      let stableName = 'Selected Stable';
-      if (stableSelect && stableSelect.selectedIndex !== -1) {
-        const selectedOption = stableSelect.options[stableSelect.selectedIndex].text;
-        if (selectedOption !== 'Loading stables...') {
-          stableName = selectedOption;
-        }
-      }
+    function updatePageTitle(stableName) {
       const titleEl = document.getElementById('horsesPageTitle');
       if (titleEl) {
-        titleEl.textContent = `Horses for ${stableName}`;
-      }
-    }
-
-    // Load horses when stable changes
+        titleEl.textContent = `Horses for ${stableName || 'Selected Stable'}`;
+          // Load horses when stable changes
     window.addEventListener('stableChanged', (e) => {
       currentStableId = e.detail.stableId;
-      updatePageTitle();
-      loadHorses(currentStableId);
+      const stableName = e.detail.stableName || 'Selected Stable';
+      updatePageTitle(stableName);
+      loadHorses();
       loadUnassignedSessions(currentStableId);
+    }); loadUnassignedSessions(currentStableId);
     });
 
     // Load status values from API
@@ -195,7 +186,10 @@
       loadStatusValues();
       currentStableId = localStorage.getItem('selectedStable');
       if (currentStableId) {
-        updatePageTitle();
+        // Delay title update to ensure stableSelect is populated
+        setTimeout(() => {
+          updatePageTitle();
+        }, 500);
         loadHorses(currentStableId);
         loadUnassignedSessions(currentStableId);
       } else {

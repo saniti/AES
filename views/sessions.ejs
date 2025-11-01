@@ -251,18 +251,10 @@
     document.getElementById('searchInput').addEventListener('input', filterSessions);
 
     // Update page title with stable name
-    function updatePageTitle() {
-      const stableSelect = document.getElementById('stableSelect');
-      let stableName = 'Selected Stable';
-      if (stableSelect && stableSelect.selectedIndex !== -1) {
-        const selectedOption = stableSelect.options[stableSelect.selectedIndex].text;
-        if (selectedOption !== 'Loading stables...') {
-          stableName = selectedOption;
-        }
-      }
+    function updatePageTitle(stableName) {
       const titleEl = document.getElementById('sessionsPageTitle');
       if (titleEl) {
-        titleEl.textContent = `Training Sessions for ${stableName}`;
+        titleEl.textContent = `Training Sessions for ${stableName || 'Selected Stable'}`;
       }
     }
 
@@ -270,8 +262,9 @@
     window.addEventListener('stableChanged', (e) => {
       if (hasLoaded) {
         currentStableId = e.detail.stableId;
-        updatePageTitle();
-        loadSessions(currentDays);
+        const stableName = e.detail.stableName || 'Selected Stable';
+        updatePageTitle(stableName);
+        loadSessions();
       }
     });
 
