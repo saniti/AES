@@ -40,6 +40,20 @@ const apiConfig = {
   baseUrl: process.env.API_BASE_URL
 };
 
+// Risk mapping configuration
+const riskMapping = {
+  green: process.env.RISK_MAPPING_GREEN || 'Low Risk',
+  yellow: process.env.RISK_MAPPING_YELLOW || 'Medium Risk',
+  red: process.env.RISK_MAPPING_RED || 'High Risk',
+  default: process.env.RISK_MAPPING_DEFAULT || 'Low Risk'
+};
+
+// Helper function to get risk label
+function getRiskLabel(trafficLight) {
+  const key = String(trafficLight || 'green').toLowerCase();
+  return riskMapping[key] || riskMapping.default;
+}
+
 // Demo mode flag
 const DEMO_MODE = process.env.DEMO_MODE === 'true';
 
@@ -246,12 +260,13 @@ app.get('/auth-callback', async (req, res) => {
   }
 });
 
-// Dashboard (protected route)
+// Dashboard // Dashboard page
 app.get('/dashboard', requireAuth, (req, res) => {
   res.render('dashboard', {
     user: req.user,
     appName: process.env.APP_NAME,
-    demoMode: DEMO_MODE
+    demoMode: DEMO_MODE,
+    riskMapping: riskMapping
   });
 });
 
@@ -260,7 +275,8 @@ app.get('/horses', requireAuth, (req, res) => {
   res.render('horses', {
     user: req.user,
     appName: process.env.APP_NAME,
-    demoMode: DEMO_MODE
+    demoMode: DEMO_MODE,
+    riskMapping: riskMapping
   });
 });
 
@@ -269,16 +285,28 @@ app.get('/sessions', requireAuth, (req, res) => {
   res.render('sessions', {
     user: req.user,
     appName: process.env.APP_NAME,
-    demoMode: DEMO_MODE
+    demoMode: DEMO_MODE,
+    riskMapping: riskMapping
   });
 });
 
-// Performance metrics page
+// Injuries page
+app.get('/injuries', requireAuth, (req, res) => {
+  res.render('injuries', {
+    user: req.user,
+    appName: process.env.APP_NAME,
+    demoMode: DEMO_MODE,
+    riskMapping: riskMapping
+  });
+});
+
+// Performance page
 app.get('/performance/:recordingId', requireAuth, (req, res) => {
   res.render('performance', {
     user: req.session.user,
     demoMode: DEMO_MODE,
-    recordingId: req.params.recordingId
+    recordingId: req.params.recordingId,
+    riskMapping: riskMapping
   });
 });
 

@@ -163,17 +163,22 @@ body.sidebar-collapsed .hamburger-menu {
 }
 
 .user-email {
-  font-size: 12px;
-  color: rgba(255,255,255,0.7);
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .user-role {
-  font-size: 11px;
-  color: var(--success-color);
-  margin-top: 4px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
 }
 
 .nav-menu {
@@ -248,6 +253,7 @@ body.sidebar-collapsed .main-content {
   font-size: 24px;
   color: var(--primary-color);
   font-weight: 600;
+  margin: 0;
 }
 
 .content-wrapper {
@@ -1371,7 +1377,8 @@ footer {
 .page-header h1 {
   margin: 0 0 8px 0;
   font-size: 32px;
-  color: var(--text-primary);
+  color: var(--primary-color);
+  font-weight: 600;
 }
 
 .subtitle {

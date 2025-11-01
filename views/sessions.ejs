@@ -8,6 +8,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/themes.css">
+  <script>
+    // Risk mapping from server
+    const riskMapping = <%- JSON.stringify(riskMapping) %>;
+    function getRiskLabel(trafficLight) {
+      const key = String(trafficLight || 'green').toLowerCase();
+      return riskMapping[key] || riskMapping.default;
+    }
+  </script>
 </head>
 <body class="with-sidebar">
   <%- include('nav') %>
@@ -178,10 +186,6 @@
       emptyEl.style.display = 'none';
 
       // Create horizontal layout matching horses page exactly
-      const injuryRiskLabel = (risk) => {
-        const r = String(risk).toLowerCase();
-        return r === 'green' ? 'Low Risk' : r === 'yellow' ? 'Medium Risk' : r === 'red' ? 'High Risk' : 'Low Risk';
-      };
 
       container.innerHTML = sessions.map(session => {
         const duration = calculateDuration(session.startTime, session.stopTime);
@@ -198,7 +202,7 @@
                 ${alias ? `<span class="horse-alias">${escapeHtml(alias)}</span>` : ''}
               </div>
               <div class="traffic-indicator traffic-${injuryRisk}">
-                ${injuryRiskLabel(injuryRisk)}
+                ${getRiskLabel(session.trafficLight || session.injuryLevel)}
               </div>
             </div>
             

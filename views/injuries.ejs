@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Injuries - Alerte Equine Science</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/themes.css">
+  <script>
+    // Risk mapping from server
+    const riskMapping = <%- JSON.stringify(riskMapping) %>;
+    function getRiskLabel(trafficLight) {
+      const key = String(trafficLight || 'green').toLowerCase();
+      return riskMapping[key] || riskMapping.default;
+    }
+  </script>
+</head>
+<body class="with-sidebar">
+  <%- include('nav') %>
+  <script>
+    // Apply saved theme immediately
+    const savedTheme = localStorage.getItem('theme') || 'default';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+
+  <div class="main-content">
+    <div class="page-header">
+      <h1>Injury Risk Management</h1>
+    </div>
+
+    <div class="filters-container">
+      <div class="time-filters">
+        <button class="filter-btn active" data-risk="all">All Horses</button>
+        <button class="filter-btn" data-risk="red">High Risk</button>
+        <button class="filter-btn" data-risk="yellow">Medium Risk</button>
+        <button class="filter-btn" data-risk="green">Low Risk</button>
+      </div>
+
+      <div class="search-filters">
+        <input type="text" id="searchInput" placeholder="Search by horse name..." class="search-input">
+      </div>
+    </div>
+
+    <div id="loadingMessage" class="loading-message">Loading injury data...</div>
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+    <div id="emptyMessage" class="empty-message" style="display: none;">No horses found</div>
+
+    <div id="injuriesContainer" class="sessions-list"></div>
+  </div>
+
+  <script>
+    let allHorses = [];
+    let currentStableId = null;
+    let currentRiskFilter = 'all';
+
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return 'Never';
+      const date = new Date(dateStr);
+      const locale = localStorage.getItem('userLocale') || 'en-AU';
+      
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        return `Today ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
+      } else if (diffDays === 1) {
+        return `Yesterday ${date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}`;
+      } else {
+        return date.toLocaleDateString(locale, { year: '2-digit', month: 'short', day: 'numeric' });
+      }
+    }
+
+    async function loadHorses() {
+      console.log('loadHorses called with stableId:', currentStableId);
+      
+      if (!currentStableId) {
+        console.error('No stable selected');
+        return;
+      }
+      
+      const loadingEl = document.getElementById('loadingMessage');
+      const errorEl = document.getElementById('errorMessage');
+      const emptyEl = document.getElementById('emptyMessage');
+      const container = document.getElementById('injuriesContainer');
+
+      loadingEl.style.display = 'block';
+      errorEl.style.display = 'none';
+      emptyEl.style.display = 'none';
+      container.innerHTML = '';
+
+      try {
+        const url = `/api/user/horses/${currentStableId}`;
+        console.log('Fetching from:', url);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          console.error('Response not OK:', response.status, response.statusText);
+          throw new Error(`Failed to load horses: ${response.status}`);
+        }
+
+        allHorses = await response.json();
+        console.log('Loaded horses:', allHorses.length, 'horses');
+        
+        // Sort by risk level (red first, then yellow, then green)
+        allHorses.sort((a, b) => {
+          const riskOrder = { 'Red': 0, 'Yellow': 1, 'Green': 2 };
+          const riskA = riskOrder[a.traffic] !== undefined ? riskOrder[a.traffic] : 3;
+          const riskB = riskOrder[b.traffic] !== undefined ? riskOrder[b.traffic] : 3;
+          return riskA - riskB;
+        });
+        
+        loadingEl.style.display = 'none';
+        filterHorses();
+      } catch (error) {
+        console.error('Error loading horses:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Error loading horses: ' + error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function filterHorses() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      
+      const filtered = allHorses.filter(horse => {
+        // Match by search term
+        const matchesSearch = !searchTerm || 
+          (horse.name && horse.name.toLowerCase().includes(searchTerm)) ||
+          (horse.brand && horse.brand.toLowerCase().includes(searchTerm));
+        
+        // Match by risk filter
+        const horseRisk = String(horse.traffic || 'Green').toLowerCase();
+        const matchesRisk = currentRiskFilter === 'all' || horseRisk === currentRiskFilter;
+
+        return matchesSearch && matchesRisk;
+      });
+
+      displayHorses(filtered);
+    }
+
+    function displayHorses(horses) {
+      const container = document.getElementById('injuriesContainer');
+      const emptyEl = document.getElementById('emptyMessage');
+
+      if (horses.length === 0) {
+        container.innerHTML = '';
+        emptyEl.textContent = 'No horses match your filters';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+
+      container.innerHTML = horses.map(horse => {
+        const injuryRisk = String(horse.traffic || 'Green').toLowerCase();
+        const horseName = horse.name || 'Unnamed';
+        const alias = horse.alias ? ` (${horse.alias})` : '';
+        
+        return `
+          <div class="horse-card-horizontal" onclick="viewHorseSessions('${horse.id}', '${escapeHtml(horse.name)}')" style="cursor: pointer;">
+            <div class="horse-main-info">
+              <div class="horse-name-badge">
+                <h3 class="horse-name">${escapeHtml(horseName)}</h3>
+                ${alias ? `<span class="horse-alias">${escapeHtml(alias)}</span>` : ''}
+              </div>
+              <div class="traffic-indicator traffic-${injuryRisk}">
+                ${getRiskLabel(horse.traffic)}
+              </div>
+            </div>
+            
+            <table class="horse-details-table">
+              <tr>
+                <th>Brand</th>
+                <th>Gender</th>
+                <th>Status</th>
+                <th>Last Session</th>
+                <th>RFID</th>
+              </tr>
+              <tr>
+                <td>${escapeHtml(horse.brand || 'N/A')}</td>
+                <td>${escapeHtml(horse.gender || 'N/A')}</td>
+                <td class="status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</td>
+                <td>${formatDateTime(horse.lastSession)}</td>
+                <td>${escapeHtml(horse.rfid || 'N/A')}</td>
+              </tr>
+            </table>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function viewHorseSessions(horseId, horseName) {
+      window.location.href = `/sessions?horseId=${horseId}&horseName=${encodeURIComponent(horseName)}`;
+    }
+
+    // Event listeners
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentRiskFilter = btn.dataset.risk;
+        console.log('Risk filter changed to:', currentRiskFilter);
+        filterHorses();
+      });
+    });
+
+    document.getElementById('searchInput').addEventListener('input', filterHorses);
+
+    // Listen for stable changes
+    window.addEventListener('stableChanged', (e) => {
+      if (hasLoaded) {
+        currentStableId = e.detail.stableId;
+        loadHorses();
+      }
+    });
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        const stableSelect = document.getElementById('stableSelect');
+        if (stableSelect && stableSelect.value) {
+          currentStableId = stableSelect.value;
+          loadHorses();
+        }
+      }, 500);
+    });
+    
+    let hasLoaded = false;
+    window.addEventListener('stableChanged', (e) => {
+      currentStableId = e.detail.stableId;
+      if (!hasLoaded) {
+        hasLoaded = true;
+        loadHorses();
+      }
+    }, { once: true });
+  </script>
+</body>
+</html>
