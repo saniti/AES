@@ -188,11 +188,17 @@
       // Create horizontal layout matching horses page exactly
 
       container.innerHTML = sessions.map(session => {
+        console.log('Session data:', {
+          horseName: session.horseName,
+          horseAlias: session.horseAlias,
+          trafficLight: session.trafficLight,
+          injuryLevel: session.injuryLevel
+        });
         const duration = calculateDuration(session.startTime, session.stopTime);
         const isHighlighted = filterDate && new Date(session.startTime).getTime() === new Date(filterDate).getTime();
-        const injuryRisk = String(session.trafficLight || session.injuryLevel || 'Green').toLowerCase();
+        const injuryRisk = String(session.trafficLight || session.injuryLevel || 'green').toLowerCase();
         const horseName = session.horseName || 'Unknown Horse';
-        const alias = session.horseAlias ? ` (${session.horseAlias})` : '';
+        const alias = session.horseAlias || session.alias || '';
         
         return `
           <div class="horse-card-horizontal ${isHighlighted ? 'highlighted' : ''}" onclick="viewSession('${session.id}')" style="cursor: pointer;">

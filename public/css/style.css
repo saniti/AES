@@ -690,7 +690,8 @@ footer {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 200px;
+  min-width: 280px;
+  flex-shrink: 0;
 }
 
 .horse-name-badge {
