@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <title>Horses - <%= appName %></title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/fonts/css/all.min.css">
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/locale.js"></script>
@@ -118,9 +118,32 @@
     </div>
   </div>
 
+  <!-- Assign Horse Modal -->
+  <div id="assignModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Assign Horse to Session</h2>
+        <button class="modal-close" onclick="closeAssignModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="assignHorseSearch">Search Horse</label>
+          <input type="text" id="assignHorseSearch" placeholder="Search by name..." onkeyup="filterAssignHorses()" />
+        </div>
+        <div id="assignHorseList" class="horse-list" style="max-height: 400px; overflow-y: auto;">
+          <!-- Horse list will be populated here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAssignModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let allHorses = [];
     let currentStableId = null;
+    let currentAssignSessionId = null;
 
     // Load horses when stable changes
     window.addEventListener('stableChanged', (e) => {
@@ -492,26 +515,53 @@
 
     function displayUnassignedSessions(sessions) {
       const container = document.getElementById('unassignedContainer');
+      const loadingEl = document.getElementById('unassignedLoading');
+      const emptyEl = document.getElementById('unassignedEmpty');
+
+      loadingEl.style.display = 'none';
+
+      if (!sessions || sessions.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
 
       container.innerHTML = sessions.map(session => {
         const duration = calculateDuration(session.startTime, session.stopTime);
+        const injuryRisk = String(session.trafficLight || session.injuryLevel || 'green').toLowerCase();
+        const riskLabel = getRiskLabel(session.trafficLight || session.injuryLevel);
+        
         return `
-          <div class="unassigned-session-card">
-            <div class="session-info-section">
-              <div class="session-time">
-                <strong>${formatDateTimeLocal(session.startTime)}</strong>
-                <span class="duration">${duration}</span>
+          <div class="horse-card-horizontal">
+            <div class="horse-main-info">
+              <div class="horse-name-badge">
+                <h3 class="horse-name">Unassigned Session</h3>
+                <span class="horse-alias">No horse assigned</span>
               </div>
-              ${session.rider ? `<div class="session-rider">Rider: ${escapeHtml(session.rider)}</div>` : ''}
-              ${session.track ? `<div class="session-track">Track: ${escapeHtml(session.track)}</div>` : ''}
+              <div class="traffic-indicator traffic-${injuryRisk}" style="background-color: ${injuryRisk === 'green' ? '#10b981' : injuryRisk === 'yellow' ? '#f59e0b' : injuryRisk === 'red' ? '#ef4444' : '#10b981'}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase;">
+                ${riskLabel}
+              </div>
             </div>
-            <div class="session-assign-section">
-              <select class="horse-select" id="horse-select-${session.id}">
-                <option value="">Select horse...</option>
-                ${allHorses.map(horse => `<option value="${horse.id}">${escapeHtml(horse.name)}</option>`).join('')}
-              </select>
-              <button class="btn btn-sm btn-primary" onclick="assignHorse('${session.id}')">
-                Assign
+            
+            <table class="horse-details-table">
+              <tr>
+                <th>Session Date/Time</th>
+                <th>Duration</th>
+                <th>Rider</th>
+                <th>Track</th>
+              </tr>
+              <tr>
+                <td>${formatDateTimeLocal(session.startTime)}</td>
+                <td>${duration}</td>
+                <td>${escapeHtml(session.rider || 'N/A')}</td>
+                <td>${escapeHtml(session.track || 'N/A')}</td>
+              </tr>
+            </table>
+            
+            <div class="horse-actions-horizontal">
+              <button class="btn btn-primary" onclick="openAssignModal('${session.id}')" title="Assign Horse">
+                <i class="fas fa-link"></i> Assign Horse
               </button>
             </div>
           </div>
@@ -519,18 +569,57 @@
       }).join('');
     }
 
-    async function assignHorse(sessionId) {
-      const selectEl = document.getElementById(`horse-select-${sessionId}`);
-      const horseId = selectEl.value;
+    function openAssignModal(sessionId) {
+      currentAssignSessionId = sessionId;
+      const modal = document.getElementById('assignModal');
+      const horseList = document.getElementById('assignHorseList');
+      
+      // Populate horse list
+      horseList.innerHTML = allHorses.map(horse => `
+        <div class="horse-list-item" onclick="selectHorseForAssign('${horse.id}')" style="padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--bg-secondary)'" onmouseout="this.style.backgroundColor='transparent'">
+          <div style="font-weight: 600;">${escapeHtml(horse.name)}</div>
+          ${horse.alias ? `<div style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(horse.alias)}</div>` : ''}
+          <div style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(horse.brand || 'N/A')} • ${escapeHtml(horse.gender || 'N/A')}</div>
+        </div>
+      `).join('');
+      
+      modal.style.display = 'block';
+    }
 
-      if (!horseId) {
-        alert('Please select a horse');
+    function closeAssignModal() {
+      const modal = document.getElementById('assignModal');
+      modal.style.display = 'none';
+      currentAssignSessionId = null;
+      document.getElementById('assignHorseSearch').value = '';
+    }
+
+    function filterAssignHorses() {
+      const searchTerm = document.getElementById('assignHorseSearch').value.toLowerCase();
+      const horseList = document.getElementById('assignHorseList');
+      
+      const filteredHorses = allHorses.filter(horse => 
+        horse.name.toLowerCase().includes(searchTerm) ||
+        (horse.alias && horse.alias.toLowerCase().includes(searchTerm))
+      );
+      
+      horseList.innerHTML = filteredHorses.map(horse => `
+        <div class="horse-list-item" onclick="selectHorseForAssign('${horse.id}')" style="padding: 12px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='var(--bg-secondary)'" onmouseout="this.style.backgroundColor='transparent'">
+          <div style="font-weight: 600;">${escapeHtml(horse.name)}</div>
+          ${horse.alias ? `<div style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(horse.alias)}</div>` : ''}
+          <div style="font-size: 12px; color: var(--text-secondary);">${escapeHtml(horse.brand || 'N/A')} • ${escapeHtml(horse.gender || 'N/A')}</div>
+        </div>
+      `).join('');
+    }
+
+    async function selectHorseForAssign(horseId) {
+      if (!currentAssignSessionId || !horseId) {
+        alert('Invalid session or horse');
         return;
       }
 
       try {
         const response = await fetch(
-          `/api/user/sessions/assign/${currentStableId}/${sessionId}/${horseId}`,
+          `/api/user/sessions/assign/${currentStableId}/${currentAssignSessionId}/${horseId}`,
           { method: 'POST' }
         );
 
@@ -539,6 +628,7 @@
         }
 
         alert('Horse assigned successfully');
+        closeAssignModal();
         loadUnassignedSessions(currentStableId);
         loadHorses(currentStableId);
       } catch (error) {
