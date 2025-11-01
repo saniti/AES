@@ -27,7 +27,7 @@
 
   <div class="main-content">
     <div class="page-header">
-      <h1>Training Sessions</h1>
+      <h1 id="sessionsPageTitle">Training Sessions</h1>
     </div>
 
     <div class="filters-container">
@@ -250,10 +250,21 @@
 
     document.getElementById('searchInput').addEventListener('input', filterSessions);
 
+    // Update page title with stable name
+    function updatePageTitle() {
+      const stables = JSON.parse(localStorage.getItem('stables') || '[]');
+      const stable = stables.find(s => s.id === currentStableId);
+      const titleEl = document.getElementById('sessionsPageTitle');
+      if (stable && titleEl) {
+        titleEl.textContent = `Training Sessions for ${stable.name}`;
+      }
+    }
+
     // Listen for stable changes (after initial load)
     window.addEventListener('stableChanged', (e) => {
       if (hasLoaded) {
         currentStableId = e.detail.stableId;
+        updatePageTitle();
         loadSessions(currentDays);
       }
     });
@@ -290,6 +301,7 @@
       currentStableId = e.detail.stableId;
       if (!hasLoaded) {
         hasLoaded = true;
+        updatePageTitle();
         loadSessions(currentDays);
       }
     }, { once: true });

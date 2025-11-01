@@ -23,7 +23,7 @@
 
   <main class="main-content">
     <header class="top-header">
-      <h1>Horses</h1>
+      <h1 id="horsesPageTitle">Horses</h1>
     </header>
 
     <div class="content-wrapper">
@@ -145,9 +145,20 @@
     let currentStableId = null;
     let currentAssignSessionId = null;
 
+    // Update page title with stable name
+    function updatePageTitle() {
+      const stables = JSON.parse(localStorage.getItem('stables') || '[]');
+      const stable = stables.find(s => s.id === currentStableId);
+      const titleEl = document.getElementById('horsesPageTitle');
+      if (stable && titleEl) {
+        titleEl.textContent = `Horses for ${stable.name}`;
+      }
+    }
+
     // Load horses when stable changes
     window.addEventListener('stableChanged', (e) => {
       currentStableId = e.detail.stableId;
+      updatePageTitle();
       loadHorses(currentStableId);
       loadUnassignedSessions(currentStableId);
     });
@@ -178,6 +189,7 @@
       loadStatusValues();
       currentStableId = localStorage.getItem('selectedStable');
       if (currentStableId) {
+        updatePageTitle();
         loadHorses(currentStableId);
         loadUnassignedSessions(currentStableId);
       } else {
@@ -489,20 +501,23 @@
         const response = await fetch(`/api/user/sessions/unassigned/${stableId}`);
         
         if (!response.ok) {
-          console.error('Unassigned sessions response not ok:', response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('Unassigned sessions response not ok:', response.status, response.statusText, errorText);
           loadingEl.style.display = 'none';
-          sectionEl.style.display = 'none';
+          emptyEl.textContent = `Error loading unassigned sessions: ${response.status}`;
+          emptyEl.style.display = 'block';
           return;
         }
 
         const sessions = await response.json();
-        console.log('Unassigned sessions received:', sessions);
-        
+        console.log('Unassigned sessions received:', sessions, 'Count:', Array.isArray(sessions) ? sessions.length : 'not an array');
         loadingEl.style.display = 'none';
 
-        if (!Array.isArray(sessions) || sessions.length === 0) {
-          sectionEl.style.display = 'none';
+        if (!sessions || sessions.length === 0) {
+          emptyEl.textContent = 'No unassigned sessions';
+          emptyEl.style.display = 'block';
         } else {
+          emptyEl.style.display = 'none';
           displayUnassignedSessions(sessions);
         }
       } catch (error) {

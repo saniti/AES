@@ -303,7 +303,7 @@ body.sidebar-collapsed .main-content {
 }
 
 .top-header {
-  background: white;
+  background: var(--bg-primary);
   padding: 20px 30px;
   border-bottom: 2px solid var(--border-color);
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
