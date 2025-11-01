@@ -187,6 +187,11 @@
     }
 
     function displayPerformanceData(data) {
+      console.log('displayPerformanceData called with:', data);
+      console.log('Data keys:', Object.keys(data));
+      console.log('speedHeartRate:', data.speedHeartRate);
+      console.log('speedHeartRateChart:', data.speedHeartRate?.speedHeartRateChart);
+      
       // Display session info
       if (data.sessionInfo) {
         // Try to get horse name from sessionInfo, then sessionStorage, then default
@@ -215,12 +220,18 @@
       document.getElementById('preWorkDistance').textContent = data.preWorkoutDistance?.distance || '--';
 
       // Create velocity/stride chart first
+      console.log('About to create velocity/stride chart');
       createVelocityStrideChart(data);
 
       // Create charts
+      console.log('Checking for speedHeartRateChart data...');
       if (data.speedHeartRate?.speedHeartRateChart) {
+        console.log('speedHeartRateChart found, creating charts');
         createCharts(data.speedHeartRate.speedHeartRateChart);
         createDataTable(data.speedHeartRate.speedHeartRateChart);
+      } else {
+        console.error('No speedHeartRateChart data available!');
+        console.log('speedHeartRate object:', data.speedHeartRate);
       }
 
       // Generate analysis
@@ -352,9 +363,26 @@
     }
 
     function createCharts(chartData) {
+      console.log('createCharts called with:', chartData);
+      console.log('chartData length:', chartData ? chartData.length : 0);
+      
+      if (!chartData || chartData.length === 0) {
+        console.error('No chart data available!');
+        return;
+      }
+      
       const speeds = chartData.map(d => d.speed);
       const heartRates = chartData.map(d => d.heartRate);
       const distances = chartData.map(d => d.distance);
+      
+      console.log('Extracted data:', { 
+        speedsCount: speeds.length, 
+        heartRatesCount: heartRates.length, 
+        distancesCount: distances.length,
+        sampleSpeed: speeds[0],
+        sampleHR: heartRates[0],
+        sampleDistance: distances[0]
+      });
 
       // Speed vs Heart Rate Chart
       const ctx1 = document.getElementById('speedHeartRateChart').getContext('2d');

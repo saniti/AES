@@ -724,22 +724,38 @@ app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
     }
 
     // Add duration to horses
+    console.log(`Processing ${Array.isArray(horses) ? horses.length : 0} horses`);
+    console.log(`Session map has ${Object.keys(sessionMap).length} entries`);
+    
     const enrichedHorses = Array.isArray(horses) ? horses.map(horse => {
       const lastSession = sessionMap[horse.id];
+      console.log(`Horse ${horse.name} (${horse.id}): lastSession=${lastSession ? 'found' : 'NOT FOUND'}`);
+      
       let duration = 'N/A';
-      if (lastSession && lastSession.startTime && lastSession.stopTime) {
-        const durationMs = new Date(lastSession.stopTime) - new Date(lastSession.startTime);
-        const totalSeconds = Math.floor(durationMs / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        duration = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      if (lastSession) {
+        console.log(`  Session times: start=${lastSession.startTime}, stop=${lastSession.stopTime}`);
+        if (lastSession.startTime && lastSession.stopTime) {
+          const durationMs = new Date(lastSession.stopTime) - new Date(lastSession.startTime);
+          const totalSeconds = Math.floor(durationMs / 1000);
+          const hours = Math.floor(totalSeconds / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          const seconds = totalSeconds % 60;
+          duration = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+          console.log(`  Calculated duration: ${duration}`);
+        } else {
+          console.log(`  Missing start or stop time`);
+        }
       }
       return {
         ...horse,
         lastSessionDuration: duration
       };
     }) : [];
+    
+    console.log(`Returning ${enrichedHorses.length} enriched horses`);
+    if (enrichedHorses.length > 0) {
+      console.log(`Sample horse: ${enrichedHorses[0].name}, duration: ${enrichedHorses[0].lastSessionDuration}`);
+    }
 
     res.json(enrichedHorses);
   } catch (error) {
