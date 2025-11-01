@@ -304,19 +304,19 @@
           
           <table class="horse-details-table">
             <tr>
+              <th>Last Session</th>
               <th>Brand</th>
               <th>Gender</th>
               <th>Age</th>
               <th>Status</th>
-              <th>Last Session</th>
               ${horse.rfid ? '<th>RFID</th>' : ''}
             </tr>
             <tr>
+              <td>${horse.lastSession ? `<span class="session-link" onclick="goToPerformance('${horse.id}', '${horse.lastSession}', '${escapeHtml(horse.name)}')">${ formatDateTimeShort(horse.lastSession)}</span>` : 'Never'}</td>
               <td>${escapeHtml(horse.brand || 'N/A')}</td>
               <td>${escapeHtml(horse.gender || 'N/A')}</td>
               <td>${age}</td>
               <td class="status-${(horse.status || 'Active').toLowerCase()}">${escapeHtml(horse.status || 'Active')}</td>
-              <td>${horse.lastSession ? `<span class="session-link" onclick="goToPerformance('${horse.id}', '${horse.lastSession}', '${escapeHtml(horse.name)}')">${ formatDateTimeShort(horse.lastSession)}</span>` : 'Never'}</td>
               ${horse.rfid ? `<td>${escapeHtml(horse.rfid)}</td>` : ''}
             </tr>
           </table>
