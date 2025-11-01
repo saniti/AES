@@ -149,7 +149,10 @@
       const titleEl = document.getElementById('horsesPageTitle');
       if (titleEl) {
         titleEl.textContent = `Horses for ${stableName || 'Selected Stable'}`;
-          // Load horses when stable changes
+      }
+    }
+
+    // Load horses when stable changes
     window.addEventListener('stableChanged', (e) => {
       currentStableId = e.detail.stableId;
       const stableName = e.detail.stableName || 'Selected Stable';
