@@ -710,11 +710,19 @@ app.get('/api/user/horses/:stableId', requireAuth, async (req, res) => {
 
     const horses = horsesResponse.data;
     const sessions = sessionsResponse.data;
+    
+    console.log('Sessions response type:', typeof sessions);
+    console.log('Sessions is array:', Array.isArray(sessions));
+    console.log('Sessions data:', sessions);
+    if (Array.isArray(sessions)) {
+      console.log('First session:', sessions[0]);
+    }
 
     // Create session lookup map by horseId
     const sessionMap = {};
     if (Array.isArray(sessions)) {
       sessions.forEach(session => {
+        console.log('Processing session:', { id: session.id, horseId: session.horseId, startTime: session.startTime });
         if (session.horseId) {
           if (!sessionMap[session.horseId] || new Date(session.startTime) > new Date(sessionMap[session.horseId].startTime)) {
             sessionMap[session.horseId] = session;
