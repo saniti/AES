@@ -8,6 +8,14 @@
   <link rel="stylesheet" href="/css/themes.css">
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/locale.js"></script>
+  <script>
+    // Risk mapping from server
+    const riskMapping = <%- JSON.stringify(riskMapping) %>;
+    function getRiskLabel(trafficLight) {
+      const key = String(trafficLight || 'green').toLowerCase();
+      return riskMapping[key] || riskMapping.default;
+    }
+  </script>
 </head>
 <body class="with-sidebar">
   <%- include('nav', { user: user }) %>
@@ -198,7 +206,7 @@
       noSessionsEl.style.display = 'none';
       container.innerHTML = sessions.map(session => {
         const injuryLevel = String(session.injuryLevel || 'Green');
-        const riskLabel = injuryLevel === 'Green' ? 'Low Risk' : injuryLevel === 'Yellow' ? 'Medium Risk' : injuryLevel === 'Red' ? 'High Risk' : 'Low Risk';
+        const riskLabel = getRiskLabel(injuryLevel);
         
         return `
           <div class="session-item" onclick="window.location.href='/session/${session.id}'">
