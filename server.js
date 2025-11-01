@@ -273,6 +273,15 @@ app.get('/sessions', requireAuth, (req, res) => {
   });
 });
 
+// Performance metrics page
+app.get('/performance/:recordingId', requireAuth, (req, res) => {
+  res.render('performance', {
+    user: req.session.user,
+    demoMode: DEMO_MODE,
+    recordingId: req.params.recordingId
+  });
+});
+
 // Session detail page
 app.get('/session/:recordingId', requireAuth, (req, res) => {
   res.render('session-detail', {
@@ -463,6 +472,93 @@ app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res)
     console.error('Unassigned sessions API error:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
       error: 'Failed to fetch unassigned sessions',
+      message: error.response?.data || error.message
+    });
+  }
+});
+
+// Get performance metrics (pdfStats)
+app.get('/api/user/performance/:recordingId', requireAuth, async (req, res) => {
+  const { recordingId } = req.params;
+  
+  if (DEMO_MODE) {
+    return res.json({
+      speedHeartRate: {
+        speedHeartRateChart: [
+          { speed: 10.5, heartRate: 120, distance: 100 },
+          { speed: 12.0, heartRate: 150, distance: 200 },
+          { speed: 13.3, heartRate: 180, distance: 300 },
+          { speed: 14.5, heartRate: 200, distance: 400 }
+        ],
+        maxHR: 205,
+        hR13Point3: 180,
+        bpM200Speed: 14.5,
+        maxBPMSpeed: 15.2
+      },
+      intervals: {},
+      preWorkTime: 15.5,
+      preWorkoutDistance: { distance: 500 }
+    });
+  }
+
+  try {
+    // Fetch performance data
+    const perfResponse = await axios.get(
+      `${apiConfig.baseUrl}/api/Recordings/pdfStats/${recordingId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${req.session.accessToken}`
+        }
+      }
+    );
+
+    const perfData = perfResponse.data;
+
+    // Fetch session metadata to get horse info
+    try {
+      const sessionResponse = await axios.get(
+        `${apiConfig.baseUrl}/api/Recordings/sessionMeta/recording/${recordingId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${req.session.accessToken}`
+          }
+        }
+      );
+
+      const session = sessionResponse.data;
+
+      // If session has horseId but no horseName, fetch it
+      if (session.horseId && !session.horseName) {
+        try {
+          const horseResponse = await axios.get(
+            `${apiConfig.baseUrl}/api/Horses/${session.horseId}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${req.session.accessToken}`
+              }
+            }
+          );
+          session.horseName = horseResponse.data.name;
+        } catch (horseError) {
+          console.error('Failed to fetch horse name:', horseError.message);
+          session.horseName = 'Unknown';
+        }
+      }
+
+      // Combine performance data with session info
+      res.json({
+        ...perfData,
+        sessionInfo: session
+      });
+    } catch (sessionError) {
+      console.error('Failed to fetch session info:', sessionError.message);
+      // Return performance data without session info
+      res.json(perfData);
+    }
+  } catch (error) {
+    console.error('Performance metrics API error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: 'Failed to fetch performance metrics',
       message: error.response?.data || error.message
     });
   }

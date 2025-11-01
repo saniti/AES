@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Performance Metrics - Alerte Equine Science</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/themes.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <%- include('nav', { user, demoMode }) %>
+    
+    <main class="main-content">
+      <header class="top-header">
+        <h1>Performance Metrics</h1>
+        <button onclick="window.history.back()" class="btn btn-secondary">← Back</button>
+      </header>
+
+      <div class="content-wrapper">
+        <div id="loadingMessage" class="loading">Loading performance data...</div>
+        <div id="errorMessage" class="error" style="display: none;"></div>
+
+        <div id="performanceContent" style="display: none;">
+          <!-- Session Info Header -->
+          <div class="performance-header">
+            <h2 id="horseName">Loading...</h2>
+            <div class="session-meta">
+              <span id="sessionDate"></span>
+              <span id="sessionDuration"></span>
+            </div>
+          </div>
+
+          <!-- Key Metrics Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Max Heart Rate</div>
+              <div class="metric-value" id="maxHR">--</div>
+              <div class="metric-unit">BPM</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">HR at 13.3 m/s</div>
+              <div class="metric-value" id="hr13Point3">--</div>
+              <div class="metric-unit">BPM</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Speed at 200 BPM</div>
+              <div class="metric-value" id="bpm200Speed">--</div>
+              <div class="metric-unit">m/s</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Max BPM Speed</div>
+              <div class="metric-value" id="maxBPMSpeed">--</div>
+              <div class="metric-unit">m/s</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Pre-Work Time</div>
+              <div class="metric-value" id="preWorkTime">--</div>
+              <div class="metric-unit">minutes</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Pre-Work Distance</div>
+              <div class="metric-value" id="preWorkDistance">--</div>
+              <div class="metric-unit">meters</div>
+            </div>
+          </div>
+
+          <!-- Charts Section -->
+          <div class="charts-section">
+            <div class="chart-container">
+              <h3>Speed vs Heart Rate</h3>
+              <canvas id="speedHeartRateChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+              <h3>Speed Over Distance</h3>
+              <canvas id="speedDistanceChart"></canvas>
+            </div>
+
+            <div class="chart-container">
+              <h3>Heart Rate Over Distance</h3>
+              <canvas id="hrDistanceChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Data Table -->
+          <div class="data-table-section">
+            <h3>Detailed Data Points</h3>
+            <div class="table-responsive">
+              <table id="dataTable" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Distance (m)</th>
+                    <th>Speed (m/s)</th>
+                    <th>Heart Rate (BPM)</th>
+                    <th>Speed (km/h)</th>
+                  </tr>
+                </thead>
+                <tbody id="dataTableBody">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/locale.js"></script>
+  <script>
+    const recordingId = '<%= recordingId %>';
+    let performanceData = null;
+
+    async function loadPerformanceData() {
+      const loadingEl = document.getElementById('loadingMessage');
+      const errorEl = document.getElementById('errorMessage');
+      const contentEl = document.getElementById('performanceContent');
+
+      try {
+        const response = await fetch(`/api/user/performance/${recordingId}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch performance data');
+        }
+
+        performanceData = await response.json();
+        console.log('Performance data:', performanceData);
+        
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+        
+        displayPerformanceData(performanceData);
+      } catch (error) {
+        console.error('Error loading performance data:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Error loading performance data: ' + error.message;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function displayPerformanceData(data) {
+      // Display session info
+      if (data.sessionInfo) {
+        document.getElementById('horseName').textContent = data.sessionInfo.horseName || 'Unknown Horse';
+        document.getElementById('sessionDate').textContent = new Date(data.sessionInfo.startTime).toLocaleString();
+        
+        if (data.sessionInfo.startTime && data.sessionInfo.stopTime) {
+          const duration = Math.floor((new Date(data.sessionInfo.stopTime) - new Date(data.sessionInfo.startTime)) / 60000);
+          document.getElementById('sessionDuration').textContent = `Duration: ${duration} minutes`;
+        }
+      }
+
+      // Display key metrics
+      if (data.speedHeartRate) {
+        const shr = data.speedHeartRate;
+        document.getElementById('maxHR').textContent = shr.maxHR || '--';
+        document.getElementById('hr13Point3').textContent = shr.hR13Point3 || '--';
+        document.getElementById('bpm200Speed').textContent = shr.bpM200Speed ? shr.bpM200Speed.toFixed(2) : '--';
+        document.getElementById('maxBPMSpeed').textContent = shr.maxBPMSpeed ? shr.maxBPMSpeed.toFixed(2) : '--';
+      }
+
+      document.getElementById('preWorkTime').textContent = data.preWorkTime ? data.preWorkTime.toFixed(1) : '--';
+      document.getElementById('preWorkDistance').textContent = data.preWorkoutDistance?.distance || '--';
+
+      // Create charts
+      if (data.speedHeartRate?.speedHeartRateChart) {
+        createCharts(data.speedHeartRate.speedHeartRateChart);
+        createDataTable(data.speedHeartRate.speedHeartRateChart);
+      }
+    }
+
+    function createCharts(chartData) {
+      const speeds = chartData.map(d => d.speed);
+      const heartRates = chartData.map(d => d.heartRate);
+      const distances = chartData.map(d => d.distance);
+
+      // Speed vs Heart Rate Chart
+      const ctx1 = document.getElementById('speedHeartRateChart').getContext('2d');
+      new Chart(ctx1, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Speed vs Heart Rate',
+            data: chartData.map(d => ({ x: d.speed, y: d.heartRate })),
+            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 2,
+            pointRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2,
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                label: (context) => `Speed: ${context.parsed.x.toFixed(2)} m/s, HR: ${context.parsed.y} BPM`
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Speed (m/s)' },
+              beginAtZero: true
+            },
+            y: {
+              title: { display: true, text: 'Heart Rate (BPM)' },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // Speed Over Distance Chart
+      const ctx2 = document.getElementById('speedDistanceChart').getContext('2d');
+      new Chart(ctx2, {
+        type: 'line',
+        data: {
+          labels: distances,
+          datasets: [{
+            label: 'Speed (m/s)',
+            data: speeds,
+            borderColor: 'rgba(16, 185, 129, 1)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Distance (m)' }
+            },
+            y: {
+              title: { display: true, text: 'Speed (m/s)' },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // Heart Rate Over Distance Chart
+      const ctx3 = document.getElementById('hrDistanceChart').getContext('2d');
+      new Chart(ctx3, {
+        type: 'line',
+        data: {
+          labels: distances,
+          datasets: [{
+            label: 'Heart Rate (BPM)',
+            data: heartRates,
+            borderColor: 'rgba(239, 68, 68, 1)',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Distance (m)' }
+            },
+            y: {
+              title: { display: true, text: 'Heart Rate (BPM)' },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    function createDataTable(chartData) {
+      const tbody = document.getElementById('dataTableBody');
+      tbody.innerHTML = chartData.map(d => `
+        <tr>
+          <td>${d.distance?.toFixed(0) || '--'}</td>
+          <td>${d.speed?.toFixed(2) || '--'}</td>
+          <td>${d.heartRate || '--'}</td>
+          <td>${d.speed ? (d.speed * 3.6).toFixed(2) : '--'}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPerformanceData();
+    });
+  </script>
+</body>
+</html>

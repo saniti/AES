@@ -108,13 +108,17 @@
       containerEl.innerHTML = '';
 
       try {
+        console.log(`Fetching sessions for stable ${stableId}, days: ${days}`);
         const response = await fetch(`/api/user/sessions/${stableId}/${days}`);
         
         if (!response.ok) {
+          console.error('Sessions API response not ok:', response.status, response.statusText);
           throw new Error('Failed to fetch sessions');
         }
 
         allSessions = await response.json();
+        console.log(`Received ${allSessions.length} sessions`);
+        console.log('Sessions data:', allSessions);
         
         // Sort by startTime (most recent first)
         allSessions.sort((a, b) => {
