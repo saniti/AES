@@ -351,31 +351,39 @@ app.put('/api/user/horses/:horseId', requireAuth, async (req, res) => {
 
 // Logout
 app.get('/logout', async (req, res) => {
-  const idToken = req.session.idToken;
+  const idToken = req.session?.idToken;
   
   // Destroy session
-  req.session.destroy((err) => {
-    if (err) {
-      console.error('Session destruction error:', err);
-    }
+  if (req.session) {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Session destruction error:', err);
+        return res.redirect('/');
+      }
 
-    if (DEMO_MODE || !idToken || !oidcClient) {
-      return res.redirect('/');
-    }
+      // Clear cookie
+      res.clearCookie('connect.sid');
 
-    try {
-      // Build logout URL
-      const logoutUrl = oidcClient.endSessionUrl({
-        id_token_hint: idToken,
-        post_logout_redirect_uri: process.env.OAUTH_POST_LOGOUT_REDIRECT_URI
-      });
+      if (DEMO_MODE || !idToken || !oidcClient) {
+        return res.redirect('/');
+      }
 
-      res.redirect(logoutUrl);
-    } catch (error) {
-      console.error('Logout error:', error);
-      res.redirect('/');
-    }
-  });
+      try {
+        // Build logout URL
+        const logoutUrl = oidcClient.endSessionUrl({
+          id_token_hint: idToken,
+          post_logout_redirect_uri: process.env.OAUTH_POST_LOGOUT_REDIRECT_URI
+        });
+
+        return res.redirect(logoutUrl);
+      } catch (error) {
+        console.error('Logout error:', error);
+        return res.redirect('/');
+      }
+    });
+  } else {
+    res.redirect('/');
+  }
 });
 
 // Get sessions/recordings by stable with days filter

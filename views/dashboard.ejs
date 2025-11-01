@@ -206,7 +206,8 @@
 
       noSessionsEl.style.display = 'none';
       container.innerHTML = sessions.map(session => {
-        const injuryLevel = String(session.injuryLevel || 'Green');
+        const injuryLevel = String(session.injuryLevel || session.trafficLight || 'Green');
+        console.log('Dashboard session:', session.horseName, 'injuryLevel:', injuryLevel);
         const riskLabel = getRiskLabel(injuryLevel);
         
         return `

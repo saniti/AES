@@ -118,18 +118,32 @@ body.sidebar-collapsed .hamburger-menu {
 .sidebar.collapsed .user-email,
 .sidebar.collapsed .user-role,
 .sidebar.collapsed .stable-selector,
-.sidebar.collapsed .theme-selector label,
-.sidebar.collapsed .theme-dropdown {
+.sidebar.collapsed .theme-selector label {
   display: none;
 }
 
+.sidebar.collapsed .theme-selector {
+  padding: 8px 5px;
+}
+
+.sidebar.collapsed .theme-dropdown {
+  width: 100%;
+  font-size: 11px;
+  padding: 6px 4px;
+  text-align: center;
+}
+
 .sidebar.collapsed .logo-container {
-  padding: 10px 5px;
+  padding: 15px 5px;
+  text-align: center;
 }
 
 .sidebar.collapsed .logo-container img {
-  max-width: 40px;
+  max-width: 50px;
+  width: 50px;
   height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
 .sidebar.collapsed .user-avatar {
