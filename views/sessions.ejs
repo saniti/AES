@@ -207,7 +207,7 @@
                 <h3 class="horse-name">${escapeHtml(horseName)}</h3>
                 ${alias ? `<span class="horse-alias">${escapeHtml(alias)}</span>` : ''}
               </div>
-              <div class="traffic-indicator traffic-${injuryRisk}">
+              <div class="traffic-indicator traffic-${injuryRisk}" style="background-color: ${injuryRisk === 'green' ? '#10b981' : injuryRisk === 'yellow' ? '#f59e0b' : injuryRisk === 'red' ? '#ef4444' : '#10b981'}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase;">
                 ${getRiskLabel(session.trafficLight || session.injuryLevel)}
               </div>
             </div>

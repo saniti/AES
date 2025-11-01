@@ -455,16 +455,20 @@ app.get('/api/user/sessions/:stableId/:days', requireAuth, async (req, res) => {
     const recordingsArray = Array.isArray(recordings) ? recordings : [];
     const horsesArray = Array.isArray(horses) ? horses : [];
 
-    // Create horse lookup map
+    // Create horse lookup map with name and alias
     const horseMap = {};
     horsesArray.forEach(horse => {
-      horseMap[horse.id] = horse.name;
+      horseMap[horse.id] = {
+        name: horse.name,
+        alias: horse.alias
+      };
     });
 
-    // Add horse names to recordings
+    // Add horse names and aliases to recordings
     const enrichedRecordings = recordingsArray.map(recording => ({
       ...recording,
-      horseName: recording.horseId ? horseMap[recording.horseId] : null
+      horseName: recording.horseId && horseMap[recording.horseId] ? horseMap[recording.horseId].name : null,
+      horseAlias: recording.horseId && horseMap[recording.horseId] ? horseMap[recording.horseId].alias : null
     }));
 
     res.json(enrichedRecordings);

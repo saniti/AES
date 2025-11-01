@@ -2016,8 +2016,9 @@ footer {
 .horse-details-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: 0;
   font-size: 14px;
+  flex: 1;
 }
 
 .horse-details-table th {
