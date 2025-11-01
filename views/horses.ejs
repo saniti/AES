@@ -147,11 +147,11 @@
 
     // Update page title with stable name
     function updatePageTitle() {
-      const stables = JSON.parse(localStorage.getItem('stables') || '[]');
-      const stable = stables.find(s => s.id === currentStableId);
+      const stableSelect = document.getElementById('stableSelect');
+      const stableName = stableSelect ? stableSelect.options[stableSelect.selectedIndex].text : 'Selected Stable';
       const titleEl = document.getElementById('horsesPageTitle');
-      if (stable && titleEl) {
-        titleEl.textContent = `Horses for ${stable.name}`;
+      if (titleEl) {
+        titleEl.textContent = `Horses for ${stableName}`;
       }
     }
 
@@ -516,8 +516,10 @@
         if (!sessions || sessions.length === 0) {
           emptyEl.textContent = 'No unassigned sessions';
           emptyEl.style.display = 'block';
+          sectionEl.style.display = 'none'; // Hide section if empty
         } else {
           emptyEl.style.display = 'none';
+          sectionEl.style.display = 'block'; // Ensure section is visible if data exists
           displayUnassignedSessions(sessions);
         }
       } catch (error) {

@@ -222,11 +222,11 @@
 
     // Update page title with stable name
     function updatePageTitle() {
-      const stables = JSON.parse(localStorage.getItem('stables') || '[]');
-      const stable = stables.find(s => s.id === currentStableId);
+      const stableSelect = document.getElementById('stableSelect');
+      const stableName = stableSelect ? stableSelect.options[stableSelect.selectedIndex].text : 'Selected Stable';
       const titleEl = document.getElementById('injuriesPageTitle');
-      if (stable && titleEl) {
-        titleEl.textContent = `Injury Risk Management for ${stable.name}`;
+      if (titleEl) {
+        titleEl.textContent = `Injury Risk Management for ${stableName}`;
       }
     }
 
