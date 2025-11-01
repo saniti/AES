@@ -501,6 +501,34 @@ app.get('/api/user/sessions/unassigned/:stableId', requireAuth, async (req, res)
     ]);
   }
 
+  const url = `${apiConfig.baseUrl}/Recordings/unassigned/session/stable/${stableId}`;
+  try {
+    const response = await axios.get(url, { headers: { Authorization: `Bearer ${req.session.accessToken}` } });
+    let data = response.data;
+
+    // CRITICAL FIX: Ensure data is an array and each item has a recordingId
+    if (!Array.isArray(data)) {
+      console.warn('Unassigned sessions API did not return an array. Coercing to empty array.');
+      data = [];
+    }
+
+    // Ensure each session has a recordingId for the frontend to use
+    data = data.map(session => {
+      if (!session.recordingId && session.id) {
+        session.recordingId = session.id;
+      }
+      return session;
+    }).filter(session => session.recordingId); // Filter out sessions without a valid ID
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching unassigned sessions:', error.message);
+    res.status(error.response?.status || 500).json({ error: 'Failed to fetch unassigned sessions' });
+  }
+});
+    ]);
+  }
+
   try {
     const response = await axios.get(
       `${apiConfig.baseUrl}/api/Recordings/unassigned/session/stable/${stableId}`,
