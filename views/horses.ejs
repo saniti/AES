@@ -492,6 +492,12 @@
       const emptyEl = document.getElementById('unassignedEmpty');
       const container = document.getElementById('unassignedSessionsContainer');
 
+      // Check if the elements exist before accessing properties
+      if (!container || !loadingEl || !emptyEl) {
+        // The unassigned sessions section is not present on this page, so we exit
+        return;
+      }
+
       loadingEl.style.display = 'block';
       emptyEl.style.display = 'none';
       container.innerHTML = '';
